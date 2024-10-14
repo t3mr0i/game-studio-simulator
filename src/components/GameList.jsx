@@ -4,26 +4,23 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { GameContext } from '../context/GameContext';
 
 function GameList() {
-    const { games, developGame, releaseGame, clickPower, workers } = useContext(GameContext);
-    const [orderedGames, setOrderedGames] = useState(games);
+    const { activeGames, developGame, releaseGame, clickPower, workers } = useContext(GameContext);
+    const [orderedGames, setOrderedGames] = useState(activeGames);
 
     useEffect(() => {
-        setOrderedGames(games);
-    }, [games]);
+        setOrderedGames(activeGames);
+    }, [activeGames]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            orderedGames.forEach((game, index) => {
-                if (!game.isReleased) {
-                    const allocatedWorkers = Math.ceil(workers.length / (orderedGames.length - index));
-                    const developmentPoints = allocatedWorkers * 5; // Adjust this multiplier as needed
-                    developGame(game.id, developmentPoints);
-                }
-            });
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [orderedGames, workers, developGame]);
+        const unreleased = orderedGames.filter(game => !game.isReleased);
+        const allocatedWorkers = workers.length;
+        const workersPerGame = Math.floor(allocatedWorkers / unreleased.length);
+        const updatedGames = orderedGames.map(game => ({
+            ...game,
+            allocatedDevelopers: game.isReleased ? 0 : workersPerGame
+        }));
+        setOrderedGames(updatedGames);
+    }, [workers, orderedGames]);
 
     const onDragEnd = (result) => {
         if (!result.destination) return;
@@ -49,7 +46,7 @@ function GameList() {
                 {(provided) => (
                     <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
                         {orderedGames.map((game, index) => (
-                            <Draggable key={game.id} draggableId={game.id.toString()} index={index}>
+                            <Draggable key={game.id.toString()} draggableId={game.id.toString()} index={index}>
                                 {(provided) => (
                                     <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
                                          className="bg-game-base-300 p-4 rounded-lg">

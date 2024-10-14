@@ -1,31 +1,11 @@
 // src/context/GameContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { getDatabase, ref, set, get, onValue } from "firebase/database";
 import { genres } from '../data/genres';
-import { saveGame, loadGame } from '../utils/saveLoad';
 import { toast } from 'react-toastify';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDU5CvUlbiPoxSGXdzq3q6-ZaBv0pN_kSg",
-  authDomain: "videodevtycoon.firebaseapp.com",
-  databaseURL: "https://videodevtycoon-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "videodevtycoon",
-  storageBucket: "videodevtycoon.appspot.com",
-  messagingSenderId: "283130645061",
-  appId: "1:283130645061:web:8ac58669a9d1a0cc39b12c",
-  measurementId: "G-5BP22KR7BS"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
 
 export const GameContext = createContext();
 
 export const GameContextProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
     const [games, setGames] = useState([]);
     const [workers, setWorkers] = useState([]);
     const [funds, setFunds] = useState(10000);
@@ -36,123 +16,8 @@ export const GameContextProvider = ({ children }) => {
     const [prestigePoints, setPrestigePoints] = useState(0);
     const [newsItems, setNewsItems] = useState([]);
     const [researchPoints, setResearchPoints] = useState(0);
-    const [availableIPs, setAvailableIPs] = useState([]);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setUser(user);
-                loadUserData(user.uid);
-            } else {
-                setUser(null);
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    const signInWithGoogle = async () => {
-        const provider = new GoogleAuthProvider();
-        try {
-            const result = await signInWithPopup(auth, provider);
-            setUser(result.user);
-            loadUserData(result.user.uid);
-        } catch (error) {
-            console.error("Error signing in with Google", error);
-            toast.error("Failed to sign in with Google");
-        }
-    };
-
-    const signInWithEmail = async (email, password) => {
-        try {
-            const result = await signInWithEmailAndPassword(auth, email, password);
-            setUser(result.user);
-            loadUserData(result.user.uid);
-        } catch (error) {
-            console.error("Error signing in with email", error);
-            toast.error("Failed to sign in with email");
-        }
-    };
-
-    const signUpWithEmail = async (email, password) => {
-        try {
-            const result = await createUserWithEmailAndPassword(auth, email, password);
-            setUser(result.user);
-            initializeUserData(result.user.uid);
-        } catch (error) {
-            console.error("Error signing up with email", error);
-            toast.error("Failed to sign up with email");
-        }
-    };
-
-    const signOut = async () => {
-        try {
-            await auth.signOut();
-            setUser(null);
-        } catch (error) {
-            console.error("Error signing out", error);
-            toast.error("Failed to sign out");
-        }
-    };
-
-    const loadUserData = async (userId) => {
-        const userRef = ref(database, `users/${userId}`);
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-            const userData = snapshot.val();
-            setGames(userData.games || []);
-            setWorkers(userData.workers || []);
-            setFunds(userData.funds || 10000);
-            setTotalClicks(userData.totalClicks || 0);
-            setClickPower(userData.clickPower || 1);
-            setAutoClickPower(userData.autoClickPower || 0);
-            setGameTime(userData.gameTime || 0);
-            setPrestigePoints(userData.prestigePoints || 0);
-            setResearchPoints(userData.researchPoints || 0);
-        } else {
-            initializeUserData(userId);
-        }
-    };
-
-    const initializeUserData = async (userId) => {
-        const initialData = {
-            games: [],
-            workers: [],
-            funds: 10000,
-            totalClicks: 0,
-            clickPower: 1,
-            autoClickPower: 0,
-            gameTime: 0,
-            prestigePoints: 0,
-            researchPoints: 0,
-        };
-        await set(ref(database, `users/${userId}`), initialData);
-        setGames(initialData.games);
-        setWorkers(initialData.workers);
-        setFunds(initialData.funds);
-        setTotalClicks(initialData.totalClicks);
-        setClickPower(initialData.clickPower);
-        setAutoClickPower(initialData.autoClickPower);
-        setGameTime(initialData.gameTime);
-        setPrestigePoints(initialData.prestigePoints);
-        setResearchPoints(initialData.researchPoints);
-    };
-
-    const saveUserData = async () => {
-        if (!user) return;
-        const userRef = ref(database, `users/${user.uid}`);
-        await set(userRef, {
-            games,
-            workers,
-            funds,
-            totalClicks,
-            clickPower,
-            autoClickPower,
-            gameTime,
-            prestigePoints,
-            researchPoints,
-        });
-    };
+    const [activeGames, setActiveGames] = useState([]);
+    const [historicalGames, setHistoricalGames] = useState([]);
 
     const createGame = useCallback((gameName, genreId) => {
         const genre = genres.find(g => g.id === genreId);
@@ -162,7 +27,7 @@ export const GameContextProvider = ({ children }) => {
             genre: genre.name,
             genreId: genre.id,
             points: 0,
-            stage: 'concept', // New: game development stages
+            stage: 'concept',
             revenue: 0,
             popularity: 0,
             bonusMultiplier: genre.bonusMultiplier,
@@ -170,14 +35,14 @@ export const GameContextProvider = ({ children }) => {
             rating: 0,
             salesDuration: 0,
         };
-        setGames([...games, newGame]);
+        setGames(prevGames => [...prevGames, newGame]);
         addNewsItem(`New game "${gameName}" development started!`);
     }, [games]);
 
-    const developGame = useCallback((gameId) => {
-        setGames(games.map(game => {
+    const developGame = useCallback((gameId, points = clickPower) => {
+        setGames(prevGames => prevGames.map(game => {
             if (game.id === gameId && !game.isReleased) {
-                const newPoints = game.points + clickPower * (1 + prestigePoints / 100);
+                const newPoints = game.points + points * (1 + prestigePoints / 100);
                 let newStage = game.stage;
                 if (newPoints >= 250 && game.stage === 'concept') newStage = 'pre-production';
                 if (newPoints >= 500 && game.stage === 'pre-production') newStage = 'production';
@@ -187,35 +52,35 @@ export const GameContextProvider = ({ children }) => {
             return game;
         }));
         setTotalClicks(clicks => clicks + 1);
-    }, [games, clickPower, prestigePoints]);
+    }, [clickPower, prestigePoints]);
 
     const hireWorker = useCallback((type) => {
         const workerCosts = { junior: 1000, senior: 5000, expert: 10000 };
         const workerProductivity = { junior: 1, senior: 3, expert: 5 };
         if (funds >= workerCosts[type]) {
-            setWorkers([...workers, { type, productivity: workerProductivity[type] }]);
-            setFunds(funds => funds - workerCosts[type]);
+            setWorkers(prevWorkers => [...prevWorkers, { type, productivity: workerProductivity[type] }]);
+            setFunds(prevFunds => prevFunds - workerCosts[type]);
             addNewsItem(`A new ${type} worker joined your team!`);
         } else {
             toast.error(`Not enough funds to hire a ${type} worker.`);
         }
-    }, [workers, funds]);
+    }, [funds]);
 
     const releaseGame = useCallback((gameId) => {
-        setGames(games.map(game => {
+        setGames(prevGames => prevGames.map(game => {
             if (game.id === gameId && !game.isReleased && game.points >= 1000 && game.stage === 'testing') {
                 const rating = Math.min(100, Math.max(0, (game.points / 20) + (Math.random() * 20 - 10)));
                 return { ...game, isReleased: true, rating, salesDuration: 30 };
             }
             return game;
         }));
-    }, [games]);
+    }, []);
 
     const upgradeClickPower = useCallback(() => {
-        const cost = Math.floor(10 * Math.pow(1.1, clickPower));
+        const cost = Math.floor(100 * Math.pow(1.1, clickPower));
         if (funds >= cost) {
-            setClickPower(power => power + 1);
-            setFunds(funds => funds - cost);
+            setClickPower(prevPower => prevPower + 1);
+            setFunds(prevFunds => prevFunds - cost);
             addNewsItem("Your clicking efficiency has improved!");
         } else {
             toast.error(`Not enough funds to upgrade click power. You need $${cost}.`);
@@ -223,92 +88,70 @@ export const GameContextProvider = ({ children }) => {
     }, [clickPower, funds]);
 
     const upgradeAutoClick = useCallback(() => {
-        const cost = Math.floor(50 * Math.pow(1.15, autoClickPower));
+        const cost = Math.floor(200 * Math.pow(1.15, autoClickPower));
         if (funds >= cost) {
-            setAutoClickPower(power => power + 1);
-            setFunds(funds => funds - cost);
-            addNewsItem("You've hired a new auto-clicker!");
+            setAutoClickPower(prevPower => prevPower + 1);
+            setFunds(prevFunds => prevFunds - cost);
+            addNewsItem("Your auto-clicking power has increased!");
         } else {
-            toast.error(`Not enough funds to hire an auto-clicker. You need $${cost}.`);
+            toast.error(`Not enough funds to upgrade auto-click power. You need $${cost}.`);
         }
     }, [autoClickPower, funds]);
 
-    const prestige = useCallback(() => {
-        const newPrestigePoints = Math.floor(Math.sqrt(funds / 1000000));
-        setPrestigePoints(points => points + newPrestigePoints);
-        setGames([]);
-        setFunds(0);
-        setTotalClicks(0);
-        setClickPower(1);
-        setAutoClickPower(0);
-        setGameTime(0);
-        addNewsItem("You've started a new game company with your accumulated experience!");
-    }, [funds]);
-
     const addNewsItem = useCallback((item) => {
-        setNewsItems(news => [item, ...news.slice(0, 4)]);
+        setNewsItems(prevItems => [item, ...prevItems.slice(0, 9)]);
     }, []);
 
     const saveGameState = useCallback(() => {
         const gameState = {
             games,
+            workers,
             funds,
             totalClicks,
             clickPower,
             autoClickPower,
             gameTime,
             prestigePoints,
+            researchPoints,
             newsItems,
         };
-        saveGame(gameState);
+        localStorage.setItem('gameDevTycoonSave', JSON.stringify(gameState));
         toast.success('Game saved successfully!');
-    }, [games, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, newsItems]);
+    }, [games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, newsItems]);
 
     const loadGameState = useCallback(() => {
-        const loadedState = loadGame();
-        if (loadedState) {
-            setGames(loadedState.games);
-            setFunds(loadedState.funds);
-            setTotalClicks(loadedState.totalClicks);
-            setClickPower(loadedState.clickPower);
-            setAutoClickPower(loadedState.autoClickPower);
-            setGameTime(loadedState.gameTime);
-            setPrestigePoints(loadedState.prestigePoints);
-            setNewsItems(loadedState.newsItems);
+        const savedState = localStorage.getItem('gameDevTycoonSave');
+        if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            setGames(parsedState.games);
+            setWorkers(parsedState.workers);
+            setFunds(parsedState.funds);
+            setTotalClicks(parsedState.totalClicks);
+            setClickPower(parsedState.clickPower);
+            setAutoClickPower(parsedState.autoClickPower);
+            setGameTime(parsedState.gameTime);
+            setPrestigePoints(parsedState.prestigePoints);
+            setResearchPoints(parsedState.researchPoints);
+            setNewsItems(parsedState.newsItems);
             toast.success('Game loaded successfully!');
         } else {
             toast.error('No saved game found.');
         }
     }, []);
 
-    const betOnIP = async (ipId) => {
-        if (funds < 1000) {
-            toast.error("Not enough funds to bet on IP");
-            return;
-        }
-        setFunds(funds - 1000);
-        // Logic to bet on IP and potentially win the contract
-        // Update availableIPs state
-    };
-
     useEffect(() => {
-        const ipsRef = ref(database, 'availableIPs');
-        const unsubscribe = onValue(ipsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                setAvailableIPs(Object.values(data));
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
+        const current = games.filter(game => !game.isReleased || game.salesDuration > 0);
+        const historical = games.filter(game => game.isReleased && game.salesDuration <= 0);
+        setActiveGames(current);
+        setHistoricalGames(historical);
+    }, [games]);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setGameTime(time => time + 1);
+            setGameTime(prevTime => prevTime + 1);
             
             // Worker and auto-click game development
-            setGames(games.map(game => {
+            setGames(prevGames => prevGames.map(game => {
                 if (!game.isReleased) {
                     const workerPoints = workers.reduce((acc, worker) => acc + worker.productivity, 0);
                     const newPoints = game.points + (workerPoints + autoClickPower) * (1 + prestigePoints / 100);
@@ -322,26 +165,25 @@ export const GameContextProvider = ({ children }) => {
             }));
 
             // Handle released games
-            setGames(games.map(game => {
-                if (game.isReleased) {
-                    if (game.salesDuration > 0) {
-                        const dailyRevenue = (game.rating / 10) * (1 + game.popularity / 100) * 100;
-                        return {
-                            ...game,
-                            revenue: game.revenue + dailyRevenue,
-                            salesDuration: game.salesDuration - 1
-                        };
-                    }
+            setGames(prevGames => prevGames.map(game => {
+                if (game.isReleased && game.salesDuration > 0) {
+                    const dailyRevenue = (game.rating / 10) * (1 + game.popularity / 100) * 100;
+                    return {
+                        ...game,
+                        revenue: game.revenue + dailyRevenue,
+                        salesDuration: game.salesDuration - 1
+                    };
                 }
                 return game;
             }));
 
             // Update funds from game revenue
-            const newRevenue = games.reduce((acc, game) => acc + (game.isReleased && game.salesDuration > 0 ? (game.rating / 10) * (1 + game.popularity / 100) * 100 : 0), 0);
-            setFunds(funds => funds + newRevenue);
+            const newRevenue = games.reduce((acc, game) => 
+                acc + (game.isReleased && game.salesDuration > 0 ? (game.rating / 10) * (1 + game.popularity / 100) * 100 : 0), 0);
+            setFunds(prevFunds => prevFunds + newRevenue);
 
             // Generate research points
-            setResearchPoints(points => points + workers.length * 0.1);
+            setResearchPoints(prevPoints => prevPoints + workers.length * 0.1);
 
             // Random events
             if (Math.random() < 0.05) { // 5% chance each second
@@ -354,19 +196,19 @@ export const GameContextProvider = ({ children }) => {
                 ];
                 addNewsItem(events[Math.floor(Math.random() * events.length)]);
             }
-
-        }, 1000); // Update every second
+        }, 1000);
 
         return () => clearInterval(interval);
     }, [games, workers, autoClickPower, prestigePoints, addNewsItem]);
 
     return (
         <GameContext.Provider value={{ 
-            user, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut,
             games, workers, funds, totalClicks, clickPower, autoClickPower, 
-            gameTime, prestigePoints, newsItems, researchPoints, availableIPs,
+            gameTime, prestigePoints, newsItems, researchPoints,
             createGame, developGame, hireWorker, releaseGame, upgradeClickPower, upgradeAutoClick, 
-            prestige, betOnIP, saveUserData,
+            saveGameState, loadGameState,
+            activeGames,
+            historicalGames,
         }}>
             {children}
         </GameContext.Provider>
