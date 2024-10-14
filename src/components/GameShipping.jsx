@@ -1,7 +1,14 @@
 // src/components/GameShipping.jsx
-import React from 'react';
+import React, { useContext } from 'react';
+import { GameContext } from '../context/GameContext';
 
-function GameShipping({ games, shipGame }) {
+function GameShipping() {
+    const { games, shipGame } = useContext(GameContext);
+
+    if (!games || games.length === 0) {
+        return <div>No games available for shipping.</div>;
+    }
+
     return (
         <div>
             {games.map((game, index) => (

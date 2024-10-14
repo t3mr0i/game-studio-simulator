@@ -2,22 +2,20 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { genres } from '../data/genres';
 import { saveGame, loadGame } from '../utils/saveLoad';
+import { toast } from 'react-toastify';
 
 export const GameContext = createContext();
 
 export const GameContextProvider = ({ children }) => {
     const [games, setGames] = useState([]);
     const [developers, setDevelopers] = useState([]);
-    const [funds, setFunds] = useState(5000);
-    const [revenue, setRevenue] = useState(0);
+    const [funds, setFunds] = useState(0);
+    const [totalClicks, setTotalClicks] = useState(0);
+    const [clickPower, setClickPower] = useState(1);
+    const [autoClickPower, setAutoClickPower] = useState(0);
     const [gameTime, setGameTime] = useState(0);
-    const [studioLevel, setStudioLevel] = useState(1);
-
-    const INITIAL_FUNDS = 5000;
-    const NEW_GAME_COST = 500;
-    const DEVELOPER_COSTS = { junior: 200, senior: 500, expert: 1000 };
-    const DEVELOPER_SALARIES = { junior: 20, senior: 50, expert: 100 };
-    const STUDIO_UPGRADE_COST_MULTIPLIER = 2000;
+    const [prestigePoints, setPrestigePoints] = useState(0);
+    const [newsItems, setNewsItems] = useState([]);
 
     const createGame = useCallback((gameName, genreId) => {
         const genre = genres.find(g => g.id === genreId);
@@ -27,84 +25,93 @@ export const GameContextProvider = ({ children }) => {
             genre: genre.name,
             genreId: genre.id,
             points: 0,
-            shipped: false,
-            rating: null,
             revenue: 0,
             popularity: 0,
             bonusMultiplier: genre.bonusMultiplier,
         };
         setGames([...games, newGame]);
-        setFunds(funds - 100); // Cost to start a new game
-    }, [games, funds]);
-
-    const hireDeveloper = useCallback((type) => {
-        if (funds >= DEVELOPER_COSTS[type]) {
-            const productivity = { junior: 1, senior: 2.5, expert: 5 };
-            setDevelopers([...developers, { id: developers.length, type, productivity: productivity[type] }]);
-            setFunds(funds - DEVELOPER_COSTS[type]);
-        } else {
-            alert(`Not enough funds to hire a ${type} developer. You need $${DEVELOPER_COSTS[type]}.`);
-        }
-    }, [developers, funds]);
-
-    const developGame = useCallback((gameId) => {
-        setGames(games.map(game => {
-            if (game.id === gameId && !game.shipped) {
-                const genre = genres.find(g => g.id === game.genreId);
-                const baseProgress = developers.reduce((acc, dev) => acc + dev.productivity, 0) * studioLevel;
-                const genreBonus = Math.random() < genre.bonusChance ? genre.bonusMultiplier : 1;
-                const progress = baseProgress * genreBonus;
-                return { ...game, points: game.points + progress };
-            }
-            return game;
-        }));
-    }, [games, developers, studioLevel]);
-
-    const shipGame = useCallback((gameId) => {
-        setGames(games.map(game => {
-            if (game.id === gameId && game.points >= 1000 && !game.shipped) {
-                const rating = Math.min(100, Math.max(0, game.points / 20 + (Math.random() * 20 - 10)));
-                return { ...game, shipped: true, rating };
-            }
-            return game;
-        }));
+        addNewsItem(`New game "${gameName}" development started!`);
     }, [games]);
 
-    const upgradeStudio = useCallback(() => {
-        const cost = studioLevel * STUDIO_UPGRADE_COST_MULTIPLIER;
+    const clickGame = useCallback((gameId) => {
+        setGames(games.map(game => {
+            if (game.id === gameId) {
+                const newPoints = game.points + clickPower * (1 + prestigePoints / 100);
+                return { ...game, points: newPoints };
+            }
+            return game;
+        }));
+        setTotalClicks(clicks => clicks + 1);
+        setFunds(funds => funds + clickPower * (1 + prestigePoints / 100));
+    }, [games, clickPower, prestigePoints]);
+
+    const upgradeClickPower = useCallback(() => {
+        const cost = Math.floor(10 * Math.pow(1.1, clickPower));
         if (funds >= cost) {
-            setStudioLevel(studioLevel + 1);
-            setFunds(funds - cost);
+            setClickPower(power => power + 1);
+            setFunds(funds => funds - cost);
+            addNewsItem("Your clicking efficiency has improved!");
         } else {
-            alert(`Not enough funds to upgrade studio. You need $${cost}.`);
+            toast.error(`Not enough funds to upgrade click power. You need $${cost}.`);
         }
-    }, [studioLevel, funds]);
+    }, [clickPower, funds]);
+
+    const upgradeAutoClick = useCallback(() => {
+        const cost = Math.floor(50 * Math.pow(1.15, autoClickPower));
+        if (funds >= cost) {
+            setAutoClickPower(power => power + 1);
+            setFunds(funds => funds - cost);
+            addNewsItem("You've hired a new auto-clicker!");
+        } else {
+            toast.error(`Not enough funds to hire an auto-clicker. You need $${cost}.`);
+        }
+    }, [autoClickPower, funds]);
+
+    const prestige = useCallback(() => {
+        const newPrestigePoints = Math.floor(Math.sqrt(funds / 1000000));
+        setPrestigePoints(points => points + newPrestigePoints);
+        setGames([]);
+        setFunds(0);
+        setTotalClicks(0);
+        setClickPower(1);
+        setAutoClickPower(0);
+        setGameTime(0);
+        addNewsItem("You've started a new game company with your accumulated experience!");
+    }, [funds]);
+
+    const addNewsItem = useCallback((item) => {
+        setNewsItems(news => [item, ...news.slice(0, 4)]);
+    }, []);
 
     const saveGameState = useCallback(() => {
         const gameState = {
             games,
-            developers,
             funds,
-            revenue,
+            totalClicks,
+            clickPower,
+            autoClickPower,
             gameTime,
-            studioLevel,
+            prestigePoints,
+            newsItems,
         };
         saveGame(gameState);
-        alert('Game saved successfully!');
-    }, [games, developers, funds, revenue, gameTime, studioLevel]);
+        toast.success('Game saved successfully!');
+    }, [games, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, newsItems]);
 
     const loadGameState = useCallback(() => {
         const loadedState = loadGame();
         if (loadedState) {
             setGames(loadedState.games);
-            setDevelopers(loadedState.developers);
             setFunds(loadedState.funds);
-            setRevenue(loadedState.revenue);
+            setTotalClicks(loadedState.totalClicks);
+            setClickPower(loadedState.clickPower);
+            setAutoClickPower(loadedState.autoClickPower);
             setGameTime(loadedState.gameTime);
-            setStudioLevel(loadedState.studioLevel);
-            alert('Game loaded successfully!');
+            setPrestigePoints(loadedState.prestigePoints);
+            setNewsItems(loadedState.newsItems);
+            toast.success('Game loaded successfully!');
         } else {
-            alert('No saved game found.');
+            toast.error('No saved game found.');
         }
     }, []);
 
@@ -112,41 +119,35 @@ export const GameContextProvider = ({ children }) => {
         const interval = setInterval(() => {
             setGameTime(time => time + 1);
             
-            // Develop games
-            games.forEach(game => {
-                if (!game.shipped) {
-                    developGame(game.id);
-                }
-            });
+            // Auto-click for all games
+            setGames(games.map(game => ({
+                ...game,
+                points: game.points + autoClickPower * (1 + prestigePoints / 100)
+            })));
+            setFunds(funds => funds + autoClickPower * (1 + prestigePoints / 100));
 
-            // Generate revenue from shipped games
-            let newRevenue = 0;
-            setGames(games.map(game => {
-                if (game.shipped) {
-                    const gameRevenue = Math.floor(game.rating * (1 + game.popularity / 100) * 10); // Increased revenue
-                    newRevenue += gameRevenue;
-                    return { ...game, revenue: game.revenue + gameRevenue };
-                }
-                return game;
-            }));
-            setRevenue(revenue => revenue + newRevenue);
-            setFunds(funds => funds + newRevenue);
-
-            // Deduct developer salaries
-            const salaries = developers.reduce((acc, dev) => acc + DEVELOPER_SALARIES[dev.type], 0);
-            setFunds(funds => funds - salaries);
+            // Random events
+            if (Math.random() < 0.05) { // 5% chance each second
+                const events = [
+                    "A meme about your latest game has gone viral!",
+                    "Your lead developer found a productivity hack!",
+                    "A minor bug was discovered in your flagship game.",
+                    "Your studio was featured in a game development magazine!",
+                    "One of your games unexpectedly topped the charts in a foreign country!"
+                ];
+                addNewsItem(events[Math.floor(Math.random() * events.length)]);
+            }
 
         }, 1000); // Update every second
 
         return () => clearInterval(interval);
-    }, [games, developers, developGame]);
+    }, [games, autoClickPower, prestigePoints, addNewsItem]);
 
     return (
         <GameContext.Provider value={{ 
-            games, developers, funds, revenue, gameTime, studioLevel,
-            createGame, hireDeveloper, shipGame, upgradeStudio,
-            saveGameState,
-            loadGameState,
+            games, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, newsItems,
+            createGame, clickGame, upgradeClickPower, upgradeAutoClick, prestige,
+            saveGameState, loadGameState,
         }}>
             {children}
         </GameContext.Provider>

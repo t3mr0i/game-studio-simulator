@@ -12,7 +12,7 @@ function GameEvents() {
             description: 'A meme about your game has gone viral! Boost popularity or cash in?',
             choices: [
                 { text: 'Boost Popularity', effect: (game) => ({ ...game, popularity: game.popularity + 20 }) },
-                { text: 'Cash In', effect: () => setFunds(funds + 1000) },
+                { text: 'Cash In', effect: () => setFunds(prevFunds => prevFunds + 1000) },
             ],
         },
         {
@@ -28,7 +28,7 @@ function GameEvents() {
             description: 'An industry conference is coming up. Do you want to attend?',
             choices: [
                 { text: 'Attend (Cost: $500)', effect: (game) => {
-                    setFunds(funds - 500);
+                    setFunds(prevFunds => prevFunds - 500);
                     return { ...game, popularity: game.popularity + 15 };
                 }},
                 { text: 'Skip', effect: () => {} },
@@ -43,7 +43,7 @@ function GameEvents() {
             { text: 'Boost Development', effect: (game) => game.genre === genre.name ? { ...game, points: game.points + 200 } : game },
             { text: 'Start New Game', effect: () => {
                 if (funds >= 100) {
-                    setFunds(funds - 100);
+                    setFunds(prevFunds => prevFunds - 100);
                     return { id: games.length, name: `Trending ${genre.name} Game`, genre: genre.name, genreId: genre.id, points: 0, shipped: false, rating: null, revenue: 0, popularity: 10, bonusMultiplier: genre.bonusMultiplier };
                 }
                 return null;
@@ -68,9 +68,9 @@ function GameEvents() {
         const result = choice.effect(affectedGame);
         if (result) {
             if (Array.isArray(result)) {
-                setGames([...games, ...result]);
+                setGames(prevGames => [...prevGames, ...result]);
             } else {
-                setGames(games.map(game => game.id === affectedGame.id ? result : game));
+                setGames(prevGames => prevGames.map(game => game.id === affectedGame.id ? result : game));
             }
         }
         setCurrentEvent(null);

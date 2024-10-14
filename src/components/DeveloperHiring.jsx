@@ -1,35 +1,33 @@
 // src/components/DeveloperHiring.jsx
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext } from 'react';
 import { GameContext } from '../context/GameContext';
 
 function DeveloperHiring() {
-    const { hireDeveloper, funds } = useContext(GameContext);
-    const [cooldown, setCooldown] = useState(0);
-
-    useEffect(() => {
-        if (cooldown > 0) {
-            const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [cooldown]);
+    const { hireDeveloper, fireDeveloper, funds, developers } = useContext(GameContext);
 
     const handleHire = (type) => {
-        if (cooldown === 0) {
-            hireDeveloper(type);
-            setCooldown(30); // 30 second cooldown
-        } else {
-            alert(`You can hire again in ${cooldown} seconds`);
-        }
+        hireDeveloper(type);
+    };
+
+    const handleFire = (id) => {
+        fireDeveloper(id);
     };
 
     return (
         <div className="developer-hiring">
-            <h2>Hire Developers</h2>
+            <h2>Manage Developers</h2>
             <p>Available Funds: ${funds}</p>
-            <button onClick={() => handleHire('junior')} disabled={cooldown > 0}>Hire Junior ($100)</button>
-            <button onClick={() => handleHire('senior')} disabled={cooldown > 0}>Hire Senior ($250)</button>
-            <button onClick={() => handleHire('expert')} disabled={cooldown > 0}>Hire Expert ($500)</button>
-            {cooldown > 0 && <p>Hiring cooldown: {cooldown}s</p>}
+            <p>Total Developers: {developers.length}</p>
+            <button onClick={() => handleHire('junior')}>Hire Junior ($200)</button>
+            <button onClick={() => handleHire('senior')}>Hire Senior ($500)</button>
+            <button onClick={() => handleHire('expert')}>Hire Expert ($1000)</button>
+            <h3>Current Developers:</h3>
+            {developers.map((dev, index) => (
+                <div key={index}>
+                    <span>{dev.type} Developer</span>
+                    <button onClick={() => handleFire(dev.id)}>Fire</button>
+                </div>
+            ))}
         </div>
     );
 }
