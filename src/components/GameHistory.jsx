@@ -43,13 +43,15 @@ function GameHistory({ games }) {
         if (game.price > 40) pros.push("Premium Pricing");
         else if (game.price < 20) cons.push("Low Price Point");
 
-        // Add more analysis points based on other game attributes
-
         setAnalysisResults(prev => ({
             ...prev,
             [gameId]: { pros, cons }
         }));
     };
+
+    if (!games || games.length === 0) {
+        return <div className="text-kb-white">No historical games available.</div>;
+    }
 
     return (
         <div className="space-y-8">
@@ -97,59 +99,65 @@ function GameHistory({ games }) {
                             )}
                         </div>
                         <div className="h-60 bg-kb-light-grey p-4 rounded-lg">
-                            <Line
-                                data={{
-                                    labels: game.salesData.map((_, index) => index + 1),
-                                    datasets: [{
-                                        label: 'Daily Sales',
-                                        data: game.salesData,
-                                        borderColor: '#FF4600',
-                                        backgroundColor: 'rgba(255, 70, 0, 0.1)',
-                                        tension: 0.1,
-                                        fill: true
-                                    }]
-                                }}
-                                options={{
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {
-                                            display: false
-                                        },
-                                        title: {
-                                            display: true,
-                                            text: 'Sales Over Time',
-                                            color: '#131417',
-                                            font: {
-                                                size: 16,
-                                                weight: 'bold'
-                                            }
-                                        }
-                                    },
-                                    scales: {
-                                        x: {
+                            {game.salesData && game.salesData.length > 0 ? (
+                                <Line
+                                    data={{
+                                        labels: game.salesData.map((_, index) => index + 1),
+                                        datasets: [{
+                                            label: 'Daily Sales',
+                                            data: game.salesData,
+                                            borderColor: '#FF4600',
+                                            backgroundColor: 'rgba(255, 70, 0, 0.1)',
+                                            tension: 0.1,
+                                            fill: true
+                                        }]
+                                    }}
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: {
+                                                display: false
+                                            },
                                             title: {
                                                 display: true,
-                                                text: 'Days Since Release',
-                                                color: '#131417'
-                                            },
-                                            ticks: {
-                                                color: '#131417'
+                                                text: 'Sales Over Time',
+                                                color: '#131417',
+                                                font: {
+                                                    size: 16,
+                                                    weight: 'bold'
+                                                }
                                             }
                                         },
-                                        y: {
-                                            title: {
-                                                display: true,
-                                                text: 'Units Sold',
-                                                color: '#131417'
+                                        scales: {
+                                            x: {
+                                                title: {
+                                                    display: true,
+                                                    text: 'Days Since Release',
+                                                    color: '#131417'
+                                                },
+                                                ticks: {
+                                                    color: '#131417'
+                                                }
                                             },
-                                            ticks: {
-                                                color: '#131417'
+                                            y: {
+                                                title: {
+                                                    display: true,
+                                                    text: 'Units Sold',
+                                                    color: '#131417'
+                                                },
+                                                ticks: {
+                                                    color: '#131417'
+                                                }
                                             }
                                         }
-                                    }
-                                }}
-                            />
+                                    }}
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-kb-grey">
+                                    No sales data available
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

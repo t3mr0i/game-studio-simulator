@@ -1,25 +1,59 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { GameContext } from '../context/GameContext';
 
-function NewsTicker() {
+const NewsTicker = () => {
     const { newsItems } = useContext(GameContext);
-    const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+    const [currentNews, setCurrentNews] = useState(null);
+    const [tickerPosition, setTickerPosition] = useState(0);
+    const tickerRef = useRef(null);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % newsItems.length);
-        }, 5000);
+        if (newsItems.length > 0 && !currentNews) {
+            setCurrentNews(newsItems[0]);
+        }
+    }, [newsItems, currentNews]);
 
-        return () => clearInterval(interval);
-    }, [newsItems]);
+    useEffect(() => {
+        if (!currentNews || !tickerRef.current) return;
+
+        const tickerWidth = tickerRef.current.offsetWidth;
+        const contentWidth = tickerRef.current.scrollWidth;
+
+        let startTime;
+        const duration = 10000; // 10 seconds to scroll through
+
+        const animate = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = (timestamp - startTime) / duration;
+
+            if (progress < 1) {
+                setTickerPosition(-progress * (contentWidth - tickerWidth));
+                requestAnimationFrame(animate);
+            } else {
+                // Move to next news item
+                setCurrentNews(newsItems[newsItems.indexOf(currentNews) + 1] || newsItems[0]);
+                setTickerPosition(0);
+            }
+        };
+
+        const animationId = requestAnimationFrame(animate);
+
+        return () => cancelAnimationFrame(animationId);
+    }, [currentNews, newsItems]);
+
+    if (!currentNews) return null;
 
     return (
-        <div className="bg-kb-light-grey text-kb-black p-2 overflow-hidden">
-            <p className="whitespace-nowrap animate-marquee text-sm">
-                {newsItems[currentNewsIndex]}
-            </p>
+        <div className="bg-gray-800 text-white p-2 overflow-hidden">
+            <div
+                ref={tickerRef}
+                className="whitespace-nowrap"
+                style={{ transform: `translateX(${tickerPosition}px)` }}
+            >
+                {currentNews.text}
+            </div>
         </div>
     );
-}
+};
 
 export default NewsTicker;

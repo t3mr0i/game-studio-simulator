@@ -242,7 +242,7 @@ export const GameContextProvider = ({ children }) => {
             setResearchPoints(prevPoints => prevPoints + workers.length * 0.1);
 
             // Random events (now less frequent, about once every 2 minutes on average)
-            if (Math.random() < 0.008) { // 0.8% chance each second
+            if (Math.random() < 0.05) { // 0.8% chance each second
                 const event = gameEvents[Math.floor(Math.random() * gameEvents.length)];
                 addNewsItem({ text: event.text, time: Date.now() });
                 event.effect();

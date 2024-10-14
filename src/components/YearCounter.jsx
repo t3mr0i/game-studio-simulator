@@ -45,15 +45,17 @@ function YearCounter() {
     }, [gameTime]);
 
     const currentYearEvents = useMemo(() => {
-        return gameHistory.filter(event => {
+        const events = gameHistory.filter(event => {
             const eventYear = parseInt(event.split(' ')[0]);
             return eventYear === currentYear;
         });
+        // If no events for the current year, use all events
+        return events.length > 0 ? events : gameHistory;
     }, [currentYear]);
 
     useEffect(() => {
         const ticker = tickerRef.current;
-        if (!ticker || currentYearEvents.length === 0) return;
+        if (!ticker) return;
 
         const speed = 60; // Pixels per second
         let animationFrameId;
@@ -63,7 +65,10 @@ function YearCounter() {
             if (!startTime) startTime = timestamp;
             const elapsed = timestamp - startTime;
 
-            const newPosition = -((elapsed * speed) / 1000);
+            const tickerWidth = ticker.offsetWidth;
+            const contentWidth = ticker.scrollWidth / 2; // Divide by 2 because content is duplicated
+
+            const newPosition = -((elapsed * speed) / 1000) % contentWidth;
             setTickerPosition(newPosition);
 
             animationFrameId = requestAnimationFrame(animate);
