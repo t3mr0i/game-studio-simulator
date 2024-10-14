@@ -9,6 +9,13 @@ function MarketingCampaigns() {
         { name: 'Social Media', cost: 500, effect: 10 },
         { name: 'YouTube Ads', cost: 1000, effect: 25 },
         { name: 'Influencer Partnership', cost: 2000, effect: 50 },
+        { name: 'Game Jam', cost: 2000, effect: 50 },
+        { name: 'Game Expo', cost: 3000, effect: 75 },
+        { name: 'Game Convention', cost: 5000, effect: 100 },
+        { name: 'Game Tournament', cost: 10000, effect: 150 },
+        { name: 'Game Convention', cost: 5000, effect: 100 },
+        
+     
     ];
 
     const runCampaign = (campaign) => {

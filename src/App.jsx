@@ -1,50 +1,23 @@
-import React, { useContext } from 'react';
-import { GameContextProvider, GameContext } from './context/GameContext';
-import GameList from './components/GameList';
-import NewGameForm from './components/NewGameForm';
-import YearCounter from './components/YearCounter';
-import NewsTicker from './components/NewsTicker';
+import React from 'react';
+import { GameContextProvider } from './context/GameContext';
+import GameContent from './components/GameContent';
+import Sidebar from './components/Sidebar';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
-function GameContent() {
-    const { funds, totalClicks, clickPower, autoClickPower, upgradeClickPower, upgradeAutoClick, prestige, prestigePoints } = useContext(GameContext);
-
-    return (
-        <div className="game-container">
-            <header className="game-header">
-                <h1>Game Dev Clicker</h1>
-            </header>
-            <div className="funds-display">Funds: ${funds.toFixed(2)}</div>
-            <div className="clicks-display">Total Clicks: {totalClicks}</div>
-            <YearCounter />
-            <NewsTicker />
-            <main className="game-main">
-                <div className="game-panel left-panel">
-                    <NewGameForm />
-                    <div className="upgrades">
-                        <h2>Upgrades</h2>
-                        <button onClick={upgradeClickPower}>Upgrade Click Power (Current: {clickPower})</button>
-                        <button onClick={upgradeAutoClick}>Hire Auto-Clicker (Current: {autoClickPower})</button>
-                    </div>
-                    <div className="prestige">
-                        <p>Prestige Points: {prestigePoints}</p>
-                        <button onClick={prestige}>Prestige</button>
-                    </div>
-                </div>
-                <div className="game-panel center-panel">
-                    <GameList />
-                </div>
-            </main>
-        </div>
-    );
-}
-
 function App() {
     return (
         <GameContextProvider>
-            <GameContent />
+            <div className="flex h-screen bg-game-base-100 text-white">
+                <Sidebar />
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <header className="bg-game-base-300 p-4">
+                        <h1 className="text-2xl font-bold">Game Dev Tycoon</h1>
+                    </header>
+                    <GameContent />
+                </div>
+            </div>
             <ToastContainer position="bottom-right" autoClose={3000} />
         </GameContextProvider>
     );

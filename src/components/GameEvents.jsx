@@ -34,7 +34,105 @@ function GameEvents() {
                 { text: 'Skip', effect: () => {} },
             ],
         },
+        {
+            title: 'Game Awards',
+            description: 'Your game has been nominated for an award! What do you do?',
+            choices: [
+                { text: 'Attend the Ceremony (Cost: $800)', effect: (game) => {
+                    setFunds(prevFunds => prevFunds - 800);
+                    return { ...game, popularity: game.popularity + 25, rating: game.rating + 10 };
+                }},
+                { text: 'Send a Video Message', effect: (game) => ({ ...game, popularity: game.popularity + 10 }) },
+            ],
+        },
+        {
+            title: 'DLC Release',
+            description: 'It’s time to release your first DLC. How do you want to approach it?',
+            choices: [
+                { text: 'Charge Full Price', effect: (game) => ({ ...game, funds: game.funds + 1500 }) },
+                { text: 'Offer a Discount', effect: (game) => ({ ...game, funds: game.funds + 1000, popularity: game.popularity + 15 }) },
+            ],
+        },
+        {
+            title: 'Game Trailer',
+            description: 'You have the chance to create a trailer for your upcoming game. What do you do?',
+            choices: [
+                { text: 'Go All Out (Cost: $1000)', effect: (game) => {
+                    setFunds(prevFunds => prevFunds - 1000);
+                    return { ...game, popularity: game.popularity + 30 };
+                }},
+                { text: 'DIY (Free)', effect: (game) => ({ ...game, popularity: game.popularity + 10 }) },
+            ],
+        },
+        {
+            title: 'Player Feedback',
+            description: 'Players are providing feedback on your latest game. How do you respond?',
+            choices: [
+                { text: 'Implement Changes (Cost: $300)', effect: (game) => {
+                    setFunds(prevFunds => prevFunds - 300);
+                    return { ...game, rating: game.rating + 5, points: Math.max(0, game.points - 100) };
+                }},
+                { text: 'Thank Them and Move On', effect: (game) => ({ ...game, popularity: game.popularity + 5 }) },
+            ],
+        },
+        {
+            title: 'Game Streaming',
+            description: 'A popular streamer wants to play your game. What do you do?',
+            choices: [
+                { text: 'Provide Early Access', effect: (game) => {
+                    return { ...game, popularity: game.popularity + 40, rating: game.rating + 5 };
+                }},
+                { text: 'Charge for Access', effect: (game) => {
+                    setFunds(prevFunds => prevFunds + 500);
+                    return game;
+                }},
+            ],
+        },
+        {
+            title: 'Critic Review',
+            description: 'A major gaming magazine is reviewing your game. What’s your strategy?',
+            choices: [
+                { text: 'Prepare a Press Kit (Cost: $200)', effect: (game) => {
+                    setFunds(prevFunds => prevFunds - 200);
+                    return { ...game, rating: game.rating + 10, popularity: game.popularity + 5 };
+                }},
+                { text: 'Let the Game Speak for Itself', effect: (game) => ({ ...game, popularity: game.popularity + 10 }) },
+            ],
+        },
+        {
+            title: 'Game Update',
+            description: 'You can release a patch to fix bugs and add features. How do you proceed?',
+            choices: [
+                { text: 'Major Update (Cost: $500)', effect: (game) => {
+                    setFunds(prevFunds => prevFunds - 500);
+                    return { ...game, rating: game.rating + 15, popularity: game.popularity + 20 };
+                }},
+                { text: 'Minor Fix (Free)', effect: (game) => ({ ...game, rating: game.rating + 5 }) },
+            ],
+        },
+        {
+            title: 'Game Jam',
+            description: 'A game jam is happening! Do you want to participate?',
+            choices: [
+                { text: 'Participate (Cost: $200)', effect: (game) => {
+                    setFunds(prevFunds => prevFunds - 200);
+                    return { ...game, rating: game.rating + 10, popularity: game.popularity + 10 };
+                }},
+                { text: 'Skip', effect: () => {} },
+            ],
+        },
+        
+        {
+            title: 'Social Media Buzz',
+            description: 'Your game is trending on social media. Do you engage with the community?',
+            choices: [
+                { text: 'Engage Actively', effect: (game) => ({ ...game, popularity: game.popularity + 25, rating: game.rating + 5 }) },
+                { text: 'Stay Silent', effect: (game) => ({ ...game, popularity: game.popularity + 10 }) },
+            ],
+        },
     ];
+
+    
 
     const genreSpecificEvents = genres.map(genre => ({
         title: `${genre.name} Trend`,

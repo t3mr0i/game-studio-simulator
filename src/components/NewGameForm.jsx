@@ -13,30 +13,32 @@ function NewGameForm() {
         if (gameName.trim() && funds >= 100) {
             createGame(gameName, genreId);
             setGameName('');
-        } else if (funds < 100) {
-            alert('Not enough funds to create a new game. You need $100.');
-        } else {
-            alert('Please enter a game name.');
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="new-game-form">
-            <h2>Create New Game</h2>
-            <input 
-                type="text" 
-                value={gameName} 
-                onChange={(e) => setGameName(e.target.value)} 
-                placeholder="Enter Game Name" 
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-2">
+            <input
+                type="text"
+                value={gameName}
+                onChange={(e) => setGameName(e.target.value)}
+                placeholder="Enter Game Name"
+                className="input input-bordered"
             />
-            <select value={genreId} onChange={(e) => setGenreId(parseInt(e.target.value))}>
+            <select
+                value={genreId}
+                onChange={(e) => setGenreId(parseInt(e.target.value))}
+                className="select select-bordered"
+            >
                 {genres.map(genre => (
-                    <option key={genre.id} value={genre.id} title={genre.description}>
+                    <option key={genre.id} value={genre.id}>
                         {genre.name}
                     </option>
                 ))}
             </select>
-            <button type="submit">Create Game ($100)</button>
+            <button type="submit" className="btn btn-primary">
+                Create Game ($100)
+            </button>
         </form>
     );
 }
