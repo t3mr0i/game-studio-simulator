@@ -1,9 +1,9 @@
 import React from 'react';
+import StudioManagement from './StudioManagement';
 import NewGameForm from './NewGameForm';
 import DeveloperHiring from './DeveloperHiring';
 import Upgrades from './Upgrades';
 import ResearchLab from './ResearchLab';
-import StudioManagement from './StudioManagement';
 
 function Sidebar({ isOpen, setIsOpen }) {
   return (
