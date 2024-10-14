@@ -7,6 +7,8 @@ import NewGameForm from './components/NewGameForm';
 import StudioUpgrades from './components/StudioUpgrades';
 import MarketingCampaigns from './components/MarketingCampaigns';
 import GameEvents from './components/GameEvents';
+import Achievements from './components/Achievements';
+import SaveLoadMenu from './components/SaveLoadMenu';
 import './App.css';
 
 function App() {
@@ -15,6 +17,7 @@ function App() {
       <div className="game-container">
         <header className="game-header">
           <h1>Game Dev Tycoon</h1>
+          <SaveLoadMenu />
         </header>
         <main className="game-main">
           <div className="game-panel left-panel">
@@ -28,6 +31,7 @@ function App() {
           <div className="game-panel right-panel">
             <MarketingCampaigns />
             <GameEvents />
+            <Achievements />
           </div>
         </main>
         <footer className="game-footer">

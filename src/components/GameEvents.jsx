@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { GameContext } from '../context/GameContext';
+import { genres } from '../data/genres';
 
 function GameEvents() {
     const { games, setGames, funds, setFunds } = useContext(GameContext);
     const [currentEvent, setCurrentEvent] = useState(null);
 
-    const events = [
+    const generalEvents = [
         {
             title: 'Viral Marketing',
             description: 'A meme about your game has gone viral! Boost popularity or cash in?',
@@ -22,13 +23,40 @@ function GameEvents() {
                 { text: 'Thorough Fix (Delays other projects)', effect: (game) => ({ ...game, rating: game.rating + 5, points: Math.max(0, game.points - 200) }) },
             ],
         },
-        // Add more events as needed
+        {
+            title: 'Industry Conference',
+            description: 'An industry conference is coming up. Do you want to attend?',
+            choices: [
+                { text: 'Attend (Cost: $500)', effect: (game) => {
+                    setFunds(funds - 500);
+                    return { ...game, popularity: game.popularity + 15 };
+                }},
+                { text: 'Skip', effect: () => {} },
+            ],
+        },
     ];
+
+    const genreSpecificEvents = genres.map(genre => ({
+        title: `${genre.name} Trend`,
+        description: `${genre.name} games are trending! Boost development or start a new ${genre.name} game?`,
+        choices: [
+            { text: 'Boost Development', effect: (game) => game.genre === genre.name ? { ...game, points: game.points + 200 } : game },
+            { text: 'Start New Game', effect: () => {
+                if (funds >= 100) {
+                    setFunds(funds - 100);
+                    return { id: games.length, name: `Trending ${genre.name} Game`, genre: genre.name, genreId: genre.id, points: 0, shipped: false, rating: null, revenue: 0, popularity: 10, bonusMultiplier: genre.bonusMultiplier };
+                }
+                return null;
+            }},
+        ],
+    }));
+
+    const allEvents = [...generalEvents, ...genreSpecificEvents];
 
     useEffect(() => {
         const eventInterval = setInterval(() => {
             if (!currentEvent && Math.random() < 0.1) { // 10% chance of event every interval
-                setCurrentEvent(events[Math.floor(Math.random() * events.length)]);
+                setCurrentEvent(allEvents[Math.floor(Math.random() * allEvents.length)]);
             }
         }, 60000); // Check for events every minute
 
@@ -37,9 +65,14 @@ function GameEvents() {
 
     const handleChoice = (choice) => {
         const affectedGame = games[Math.floor(Math.random() * games.length)];
-        setGames(games.map(game => 
-            game.id === affectedGame.id ? choice.effect(game) : game
-        ));
+        const result = choice.effect(affectedGame);
+        if (result) {
+            if (Array.isArray(result)) {
+                setGames([...games, ...result]);
+            } else {
+                setGames(games.map(game => game.id === affectedGame.id ? result : game));
+            }
+        }
         setCurrentEvent(null);
     };
 
