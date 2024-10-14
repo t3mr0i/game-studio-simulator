@@ -1,32 +1,33 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { GameContext } from '../context/GameContext';
 import GameList from './GameList';
 import GameHistory from './GameHistory';
 import YearCounter from './YearCounter';
 import NewsTicker from './NewsTicker';
-import Upgrades from './Upgrades';
-import ResearchLab from './ResearchLab';
-import DeveloperHiring from './DeveloperHiring';
-import NewGameForm from './NewGameForm';
+import Sidebar from './Sidebar';
 
 function GameContent() {
-  const { funds, totalClicks, saveGameState, loadGameState } = useContext(GameContext);
+  const { funds, totalClicks, saveGameState, loadGameState, games } = useContext(GameContext);
   const [activeTab, setActiveTab] = useState('active');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const sidebarRef = useRef(null);
+
+  const activeGames = games.filter(game => !game.isReleased);
+  const historicalGames = games.filter(game => game.isReleased);
 
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
         setSidebarOpen(false);
       }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [sidebarRef]);
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="h-full flex flex-col bg-kb-white text-kb-black font-sans">
@@ -50,20 +51,10 @@ function GameContent() {
       <NewsTicker />
       
       <div className="flex-grow flex overflow-hidden relative">
-        {sidebarOpen && (
-          <div className="fixed inset-0 bg-kb-black bg-opacity-50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>
-        )}
-        <aside ref={sidebarRef} className={`w-64 bg-kb-white text-kb-black p-4 overflow-y-auto transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 shadow-lg`}>
-          <div className="space-y-6">
-            <NewGameForm />
-            <DeveloperHiring />
-            <Upgrades />
-            <ResearchLab />
-          </div>
-        </aside>
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
         
         <main className="flex-grow p-4 overflow-y-auto">
-          <div className="bg-kb-white rounded-lg shadow-md p-4">
+          <div className="bg-kb-white rounded-lg shadow-lg p-4">
             <div className="flex mb-4 space-x-2">
               <button 
                 className={`px-4 py-2 rounded-lg transition-colors ${activeTab === 'active' ? 'bg-kb-live-red text-kb-black' : 'bg-kb-light-grey text-kb-black hover:bg-kb-grey'}`}
@@ -78,7 +69,7 @@ function GameContent() {
                 Game History
               </button>
             </div>
-            {activeTab === 'active' ? <GameList /> : <GameHistory />}
+            {activeTab === 'active' ? <GameList games={activeGames} /> : <GameHistory games={historicalGames} />}
           </div>
         </main>
       </div>

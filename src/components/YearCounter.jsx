@@ -106,7 +106,37 @@ const gameHistory = [
 "2023 - The success of indie games continues to rise, with titles like Hades and Stray receiving critical acclaim and showcasing the potential for smaller studios.",
 "2024 - Microsoft announces plans to enhance the Xbox Game Pass, focusing on integrating AI to personalize player experiences and recommendations.",
 "2024 - The gaming industry sees a major push towards inclusivity, with more games featuring diverse characters and narratives, changing the face of storytelling in games.",
-    "1978 - Space Invaders releases, causing a coin shortage in Japan as players line up to defend Earth from pixelated alien invaders.",
+"1972 - Pong becomes the first commercially successful video game, accidentally starting the 'arcade era' and turning tennis into a digital sensation.",
+"1978 - Space Invaders releases, causing a coin shortage in Japan as players line up to defend Earth from pixelated alien invaders.",
+"1980 - Pac-Man fever sweeps the globe; ghosts Inky, Blinky, Pinky, and Clyde become household names.",
+"1981 - Donkey Kong introduces Mario (originally called Jumpman) to the world, starting Nintendo's most iconic franchise.",
+"1983 - The video game crash of 1983 leads to the decline of the arcade industry and the end of many gaming companies.",
+"1985 - Super Mario Bros. launches with the NES, revolutionizing platformers and establishing Nintendo as a gaming powerhouse.",
+"1986 - The Legend of Zelda releases, introducing players to Hyrule and laying the groundwork for open-world exploration in video games.",
+"1987 - Metal Gear debuts, introducing stealth gameplay and complex storytelling to video games.",
+"1989 - Game Boy launches, making portable gaming mainstream and introducing Tetris to millions.",
+"1991 - Sonic the Hedgehog speeds onto the scene, becoming Sega's mascot and Mario's biggest rival.",
+"1993 - Doom releases, popularizing the first-person shooter genre and pioneering networked multiplayer.",
+"1994 - Sony enters the console market with the PlayStation, bringing 3D graphics to the masses.",
+"1996 - Pokémon Red and Green launch in Japan, starting a global phenomenon of catching 'em all.",
+"1997 - Final Fantasy VII is released, popularizing JRPGs in the West and setting new standards for storytelling in games.",
+"1998 - The Legend of Zelda: Ocarina of Time releases, often cited as one of the greatest games ever made.",
+"2000 - The PlayStation 2 launches, becoming the best-selling video game console of all time.",
+"2001 - Grand Theft Auto III releases, popularizing open-world sandbox gameplay.",
+"2004 - World of Warcraft launches, defining the MMORPG genre and peaking at over 12 million subscribers.",
+"2005 - Guitar Hero releases, starting a rhythm game craze and bringing plastic instruments into living rooms.",
+"2006 - Nintendo Wii launches, introducing motion controls to a wide audience and becoming a cultural phenomenon.",
+"2007 - The first iPhone is released, paving the way for the mobile gaming revolution.",
+"2009 - Minecraft enters early access, eventually becoming the best-selling video game of all time.",
+"2011 - Twitch.tv launches, revolutionizing how people watch and interact with gaming content.",
+"2013 - Grand Theft Auto V releases, becoming one of the most financially successful entertainment products of all time.",
+"2016 - Pokémon GO launches, bringing augmented reality gaming to the mainstream.",
+"2017 - Nintendo Switch releases, blurring the line between home and portable gaming.",
+"2020 - Among Us skyrockets in popularity during the pandemic, becoming a cultural phenomenon.",
+"2022 - Microsoft announces plans to acquire Activision Blizzard for $68.7 billion, the largest acquisition in gaming history.",
+"2023 - The Last of Us HBO series premieres, setting new standards for video game adaptations.",
+"2024 - Virtual reality gaming sees a resurgence with more affordable and advanced headsets entering the market.",   
+"1978 - Space Invaders releases, causing a coin shortage in Japan as players line up to defend Earth from pixelated alien invaders.",
     "1981 - Frogger hops onto the arcade scene, teaching a generation of gamers about the dangers of road crossings.",
     "1982 - Pitfall! releases, making players obsessed with swinging over pixelated alligators and jumping into pixel-perfect pits.",
     "1983 - Dragon’s Lair arrives, pioneering full-motion video in arcades, making it a beautiful but wallet-draining experience.",
@@ -184,6 +214,7 @@ function YearCounter() {
     const { gameTime } = useContext(GameContext);
     const [currentYear, setCurrentYear] = useState(1972);
     const [tickerPosition, setTickerPosition] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
     const tickerRef = useRef(null);
 
     useEffect(() => {
@@ -202,28 +233,54 @@ function YearCounter() {
         const ticker = tickerRef.current;
         if (!ticker || currentYearEvents.length === 0) return;
 
-        const animate = () => {
-            setTickerPosition((prevPosition) => {
-                const newPosition = prevPosition - 1;
-                return newPosition <= -ticker.scrollWidth / 2 ? 0 : newPosition;
-            });
-            requestAnimationFrame(animate);
+        const speed = 70; // Pixels per second
+        const pauseDuration = 0; // 5 seconds pause between iterations
+        let animationFrameId;
+        let startTime;
+
+        const animate = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+
+            if (!isPaused) {
+                const newPosition = -((elapsed * speed) / 1000) % ticker.scrollWidth;
+                setTickerPosition(newPosition);
+
+                if (-newPosition >= ticker.scrollWidth / 2) {
+                    setIsPaused(true);
+                    setTimeout(() => {
+                        setIsPaused(false);
+                        startTime = null;
+                    }, pauseDuration);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
         };
 
-        const animationId = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(animationId);
-    }, [currentYearEvents]);
+        animationFrameId = requestAnimationFrame(animate);
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [currentYearEvents, isPaused]);
 
     const tickerStyle = {
         transform: `translateX(${tickerPosition}px)`,
         whiteSpace: 'nowrap',
         display: 'inline-block',
+        transition: 'transform 0.1s linear',
+    };
+
+    const gradientMaskStyle = {
+        maskImage: 'linear-gradient(to right, transparent, black 20px, black)',
+        WebkitMaskImage: 'linear-gradient(to right, transparent, black 20px, black)',
     };
 
     return (
-        <div className="bg-blue-600 text-white p-2 flex items-center">
-            <span className="mr-4 text-2xl font-bold min-w-[120px]">Year: {currentYear}</span>
-            <div className="flex-1 overflow-hidden">
+        <div className="bg-kb-black text-white p-2 flex items-center">
+            <span className="mr-1 text-2xl font-bold min-w-[70px]">{currentYear}</span>
+            <div className="flex-1 overflow-hidden" style={gradientMaskStyle}>
                 <div ref={tickerRef} style={tickerStyle}>
                     {currentYearEvents.map((event, index) => (
                         <span key={index} className="mr-8">{event}</span>

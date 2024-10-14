@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { genres } from '../data/genres';
 import { toast } from 'react-toastify';
+import { customToast } from '../utils/toast';
 
 export const GameContext = createContext();
 
@@ -18,6 +19,7 @@ export const GameContextProvider = ({ children }) => {
     const [researchPoints, setResearchPoints] = useState(0);
     const [activeGames, setActiveGames] = useState([]);
     const [historicalGames, setHistoricalGames] = useState([]);
+    const [completedResearch, setCompletedResearch] = useState([]);
 
     const createGame = useCallback((gameName, genreId) => {
         const genre = genres.find(g => g.id === genreId);
@@ -116,7 +118,7 @@ export const GameContextProvider = ({ children }) => {
             newsItems,
         };
         localStorage.setItem('gameDevTycoonSave', JSON.stringify(gameState));
-        toast.success('Game saved successfully!');
+        customToast.success('Game saved successfully!');
     }, [games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, newsItems]);
 
     const loadGameState = useCallback(() => {
@@ -133,9 +135,9 @@ export const GameContextProvider = ({ children }) => {
             setPrestigePoints(parsedState.prestigePoints);
             setResearchPoints(parsedState.researchPoints);
             setNewsItems(parsedState.newsItems);
-            toast.success('Game loaded successfully!');
+            customToast.success('Game loaded successfully!');
         } else {
-            toast.error('No saved game found.');
+            customToast.error('No saved game found.');
         }
     }, []);
 
@@ -201,6 +203,15 @@ export const GameContextProvider = ({ children }) => {
         return () => clearInterval(interval);
     }, [games, workers, autoClickPower, prestigePoints, addNewsItem]);
 
+    // Generate research points based on the number of developers
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setResearchPoints(prevPoints => prevPoints + workers.length * 0.1);
+        }, 1000); // Generate points every second
+
+        return () => clearInterval(interval);
+    }, [workers]);
+
     return (
         <GameContext.Provider value={{ 
             games, workers, funds, totalClicks, clickPower, autoClickPower, 
@@ -209,6 +220,8 @@ export const GameContextProvider = ({ children }) => {
             saveGameState, loadGameState,
             activeGames,
             historicalGames,
+            completedResearch,
+            setCompletedResearch,
         }}>
             {children}
         </GameContext.Provider>

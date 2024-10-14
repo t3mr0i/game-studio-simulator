@@ -1,5 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { GameContext } from '../context/GameContext';
+import { customToast } from '../utils/toast';
 
 const allResearchProjects = [
     { id: 1, name: '2D Sprite-Based Graphics', cost: 5000, duration: 30, effect: 'Increases game quality by 10%, adds sprite-based visual capabilities', yearAvailable: 1972 },
@@ -46,38 +47,91 @@ const allResearchProjects = [
 ];
 
 function ResearchLab() {
-    const { researchPoints, setResearchPoints, gameTime } = useContext(GameContext);
+    const { researchPoints, setResearchPoints, gameTime, workers, completedResearch, setCompletedResearch } = useContext(GameContext);
     const [availableProjects, setAvailableProjects] = useState([]);
+    const [activeResearch, setActiveResearch] = useState(null);
+    const [progress, setProgress] = useState(0);
 
-    const currentYear = Math.floor(gameTime / 360) + 1972; // Slowed down game time
+    const currentYear = Math.floor(gameTime / 360) + 1972;
 
     useEffect(() => {
-        const filteredProjects = allResearchProjects.filter(project => project.yearAvailable <= currentYear);
-        setAvailableProjects(filteredProjects.slice(-5)); // Only show the latest 5 projects
-    }, [currentYear]);
+        const filteredProjects = allResearchProjects.filter(project => 
+            project.yearAvailable <= currentYear && !completedResearch.includes(project.id)
+        );
+        setAvailableProjects(filteredProjects.slice(-5));
+    }, [currentYear, completedResearch]);
+
+    useEffect(() => {
+        let timer;
+        if (activeResearch) {
+            timer = setInterval(() => {
+                setProgress(prev => {
+                    if (prev >= 100) {
+                        clearInterval(timer);
+                        completeResearch(activeResearch);
+                        return 0;
+                    }
+                    return prev + 1;
+                });
+            }, activeResearch.duration * 10); // Adjust this value to change research speed
+        }
+        return () => clearInterval(timer);
+    }, [activeResearch]);
 
     const startResearch = (project) => {
         if (researchPoints >= project.cost) {
             setResearchPoints(prevPoints => prevPoints - project.cost);
-            // Implement the effects of completed research here
-            alert(`Research complete: ${project.name}`);
+            setActiveResearch(project);
+            setProgress(0);
+            customToast.info(`Started research: ${project.name}`);
         } else {
-            alert('Not enough research points for this project.');
+            customToast.error('Not enough research points for this project.');
         }
     };
 
+    const completeResearch = (project) => {
+        setCompletedResearch(prev => [...prev, project.id]);
+        setActiveResearch(null);
+        customToast.success(`Research complete: ${project.name}`);
+        // Implement the effects of completed research here
+    };
+
     return (
-        <div className="research-lab">
-            <h2 className="text-xl font-bold mb-2">Research Lab</h2>
-            <p>Research Points: {researchPoints.toFixed(1)}</p>
-            <div>
-                <h3>Available Projects</h3>
+        <div className="bg-kb-black p-4 rounded-lg shadow-md mt-12">
+            <h2 className="text-xl font-bold mb-4 text-kb-white">Research Lab</h2>
+            <p className="text-kb-grey mb-2">Research Points: {researchPoints.toFixed(1)}</p>
+            <p className="text-kb-grey mb-4">Generating {(workers.length * 0.1).toFixed(1)} RP/s</p>
+            {activeResearch && (
+                <div className="mb-4">
+                    <p className="text-kb-white">Researching: {activeResearch.name}</p>
+                    <div className="w-full bg-kb-grey rounded-full h-2.5 dark:bg-kb-grey">
+                        <div className="bg-kb-live-red h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                    </div>
+                </div>
+            )}
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-kb-white">Available Projects</h3>
                 {availableProjects.map(project => (
-                    <div key={project.id} className="research-project">
-                        <h4>{project.name}</h4>
-                        <p>Cost: {project.cost} RP</p>
-                        <p>Effect: {project.effect}</p>
-                        <button onClick={() => startResearch(project)}>Start Research</button>
+                    <div key={project.id} className="bg-kb-dark-grey p-3 rounded-lg">
+                        <h4 className="text-kb-white font-semibold">{project.name}</h4>
+                        <p className="text-kb-light-grey text-sm mb-1">Cost: {project.cost} RP</p>
+                        <p className="text-kb-light-grey text-sm mb-2">{project.effect}</p>
+                        {completedResearch.includes(project.id) ? (
+                            <div className="text-green-500 flex items-center">
+                                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Completed
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={() => startResearch(project)}
+                                className="w-full bg-kb-live-red text-kb-black px-4 py-2 rounded hover:bg-opacity-90 transition-colors disabled:bg-kb-grey disabled:cursor-not-allowed"
+                                disabled={researchPoints < project.cost || activeResearch}
+                            >
+                                Start Research
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>

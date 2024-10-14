@@ -15,7 +15,20 @@ function App() {
                     <GameContent />
                 </div>
             </div>
-            <ToastContainer position="bottom-right" autoClose={3000} />
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="dark"
+                toastClassName="bg-kb-black text-kb-white"
+                progressClassName="bg-kb-live-red"
+            />
         </GameContextProvider>
     );
 }

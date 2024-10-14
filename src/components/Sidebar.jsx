@@ -1,19 +1,31 @@
 import React from 'react';
 import NewGameForm from './NewGameForm';
 import DeveloperHiring from './DeveloperHiring';
+import Upgrades from './Upgrades';
+import ResearchLab from './ResearchLab';
 
 function Sidebar({ isOpen, setIsOpen }) {
   return (
-    <div
-      className={`${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      } transform lg:translate-x-0 lg:static fixed inset-y-0 left-0 z-30 w-64 bg-game-base-200 overflow-y-auto transition duration-300 ease-in-out lg:translate-x-0`}
-    >
-      <div className="p-4">
-        <NewGameForm />
-        <DeveloperHiring />
+    <>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        ></div>
+      )}
+      <div
+        className={`${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } transform lg:translate-x-0 lg:static fixed inset-y-0 left-0 z-50 w-64 bg-kb-black text-kb-white overflow-y-auto transition duration-300 ease-in-out lg:translate-x-0`}
+      >
+        <div className="p-4 space-y-6">
+          <NewGameForm />
+          <DeveloperHiring />
+          <Upgrades />
+          <ResearchLab />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

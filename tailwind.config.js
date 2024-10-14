@@ -11,6 +11,7 @@ module.exports = {
         'kb-dark-grey': '#474B4E',
         'kb-grey': '#7E8187',
         'kb-light-grey': '#A8ADB4',
+        'kb-red': '#FF0000', // Replace with your actual kb-red color code
       },
       fontFamily: {
         'sans': ['Roboto', 'Helvetica', 'Arial', 'sans-serif'],

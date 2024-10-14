@@ -39,7 +39,7 @@ function NewGameForm() {
             </select>
             <button 
                 type="submit" 
-                className="w-full bg-kb-live-red text-kb-black  rounded hover:bg-opacity-90 transition-colors mr-1"
+                className="w-full bg-kb-live-red text-kb-black px-4 py-2 rounded hover:bg-opacity-90 transition-colors disabled:bg-kb-grey disabled:cursor-not-allowed"
                 disabled={funds < 100}
             >
                 Create Game ($100)
