@@ -1,10 +1,11 @@
 // src/context/GameContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { initializeApp } from "firebase/app";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { getDatabase, ref, set, get, onValue } from "firebase/database";
 import { genres } from '../data/genres';
 import { saveGame, loadGame } from '../utils/saveLoad';
 import { toast } from 'react-toastify';
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDU5CvUlbiPoxSGXdzq3q6-ZaBv0pN_kSg",
@@ -18,14 +19,16 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const database = getDatabase(app);
 
 export const GameContext = createContext();
 
 export const GameContextProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
     const [games, setGames] = useState([]);
     const [workers, setWorkers] = useState([]);
-    const [funds, setFunds] = useState(10000); // Starting budget
+    const [funds, setFunds] = useState(10000);
     const [totalClicks, setTotalClicks] = useState(0);
     const [clickPower, setClickPower] = useState(1);
     const [autoClickPower, setAutoClickPower] = useState(0);
@@ -33,6 +36,123 @@ export const GameContextProvider = ({ children }) => {
     const [prestigePoints, setPrestigePoints] = useState(0);
     const [newsItems, setNewsItems] = useState([]);
     const [researchPoints, setResearchPoints] = useState(0);
+    const [availableIPs, setAvailableIPs] = useState([]);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setUser(user);
+                loadUserData(user.uid);
+            } else {
+                setUser(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const signInWithGoogle = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            const result = await signInWithPopup(auth, provider);
+            setUser(result.user);
+            loadUserData(result.user.uid);
+        } catch (error) {
+            console.error("Error signing in with Google", error);
+            toast.error("Failed to sign in with Google");
+        }
+    };
+
+    const signInWithEmail = async (email, password) => {
+        try {
+            const result = await signInWithEmailAndPassword(auth, email, password);
+            setUser(result.user);
+            loadUserData(result.user.uid);
+        } catch (error) {
+            console.error("Error signing in with email", error);
+            toast.error("Failed to sign in with email");
+        }
+    };
+
+    const signUpWithEmail = async (email, password) => {
+        try {
+            const result = await createUserWithEmailAndPassword(auth, email, password);
+            setUser(result.user);
+            initializeUserData(result.user.uid);
+        } catch (error) {
+            console.error("Error signing up with email", error);
+            toast.error("Failed to sign up with email");
+        }
+    };
+
+    const signOut = async () => {
+        try {
+            await auth.signOut();
+            setUser(null);
+        } catch (error) {
+            console.error("Error signing out", error);
+            toast.error("Failed to sign out");
+        }
+    };
+
+    const loadUserData = async (userId) => {
+        const userRef = ref(database, `users/${userId}`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            setGames(userData.games || []);
+            setWorkers(userData.workers || []);
+            setFunds(userData.funds || 10000);
+            setTotalClicks(userData.totalClicks || 0);
+            setClickPower(userData.clickPower || 1);
+            setAutoClickPower(userData.autoClickPower || 0);
+            setGameTime(userData.gameTime || 0);
+            setPrestigePoints(userData.prestigePoints || 0);
+            setResearchPoints(userData.researchPoints || 0);
+        } else {
+            initializeUserData(userId);
+        }
+    };
+
+    const initializeUserData = async (userId) => {
+        const initialData = {
+            games: [],
+            workers: [],
+            funds: 10000,
+            totalClicks: 0,
+            clickPower: 1,
+            autoClickPower: 0,
+            gameTime: 0,
+            prestigePoints: 0,
+            researchPoints: 0,
+        };
+        await set(ref(database, `users/${userId}`), initialData);
+        setGames(initialData.games);
+        setWorkers(initialData.workers);
+        setFunds(initialData.funds);
+        setTotalClicks(initialData.totalClicks);
+        setClickPower(initialData.clickPower);
+        setAutoClickPower(initialData.autoClickPower);
+        setGameTime(initialData.gameTime);
+        setPrestigePoints(initialData.prestigePoints);
+        setResearchPoints(initialData.researchPoints);
+    };
+
+    const saveUserData = async () => {
+        if (!user) return;
+        const userRef = ref(database, `users/${user.uid}`);
+        await set(userRef, {
+            games,
+            workers,
+            funds,
+            totalClicks,
+            clickPower,
+            autoClickPower,
+            gameTime,
+            prestigePoints,
+            researchPoints,
+        });
+    };
 
     const createGame = useCallback((gameName, genreId) => {
         const genre = genres.find(g => g.id === genreId);
@@ -140,30 +260,47 @@ export const GameContextProvider = ({ children }) => {
             prestigePoints,
             newsItems,
         };
-        set(ref(database, 'gameState'), gameState);
+        saveGame(gameState);
         toast.success('Game saved successfully!');
     }, [games, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, newsItems]);
 
     const loadGameState = useCallback(() => {
-        get(ref(database, 'gameState')).then((snapshot) => {
-            if (snapshot.exists()) {
-                const loadedState = snapshot.val();
-                setGames(loadedState.games);
-                setFunds(loadedState.funds);
-                setTotalClicks(loadedState.totalClicks);
-                setClickPower(loadedState.clickPower);
-                setAutoClickPower(loadedState.autoClickPower);
-                setGameTime(loadedState.gameTime);
-                setPrestigePoints(loadedState.prestigePoints);
-                setNewsItems(loadedState.newsItems);
-                toast.success('Game loaded successfully!');
-            } else {
-                toast.error('No saved game found.');
+        const loadedState = loadGame();
+        if (loadedState) {
+            setGames(loadedState.games);
+            setFunds(loadedState.funds);
+            setTotalClicks(loadedState.totalClicks);
+            setClickPower(loadedState.clickPower);
+            setAutoClickPower(loadedState.autoClickPower);
+            setGameTime(loadedState.gameTime);
+            setPrestigePoints(loadedState.prestigePoints);
+            setNewsItems(loadedState.newsItems);
+            toast.success('Game loaded successfully!');
+        } else {
+            toast.error('No saved game found.');
+        }
+    }, []);
+
+    const betOnIP = async (ipId) => {
+        if (funds < 1000) {
+            toast.error("Not enough funds to bet on IP");
+            return;
+        }
+        setFunds(funds - 1000);
+        // Logic to bet on IP and potentially win the contract
+        // Update availableIPs state
+    };
+
+    useEffect(() => {
+        const ipsRef = ref(database, 'availableIPs');
+        const unsubscribe = onValue(ipsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                setAvailableIPs(Object.values(data));
             }
-        }).catch((error) => {
-            console.error(error);
-            toast.error('Error loading game.');
         });
+
+        return () => unsubscribe();
     }, []);
 
     useEffect(() => {
@@ -225,9 +362,11 @@ export const GameContextProvider = ({ children }) => {
 
     return (
         <GameContext.Provider value={{ 
-            games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, newsItems, researchPoints,
-            createGame, developGame, hireWorker, releaseGame, upgradeClickPower, upgradeAutoClick, prestige,
-            saveGameState, loadGameState,
+            user, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut,
+            games, workers, funds, totalClicks, clickPower, autoClickPower, 
+            gameTime, prestigePoints, newsItems, researchPoints, availableIPs,
+            createGame, developGame, hireWorker, releaseGame, upgradeClickPower, upgradeAutoClick, 
+            prestige, betOnIP, saveUserData,
         }}>
             {children}
         </GameContext.Provider>

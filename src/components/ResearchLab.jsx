@@ -49,10 +49,11 @@ function ResearchLab() {
     const { researchPoints, setResearchPoints, gameTime } = useContext(GameContext);
     const [availableProjects, setAvailableProjects] = useState([]);
 
-    const currentYear = Math.floor(gameTime / 60) + 1972;
+    const currentYear = Math.floor(gameTime / 360) + 1972; // Slowed down game time
 
     useEffect(() => {
-        setAvailableProjects(allResearchProjects.filter(project => project.yearAvailable <= currentYear));
+        const filteredProjects = allResearchProjects.filter(project => project.yearAvailable <= currentYear);
+        setAvailableProjects(filteredProjects.slice(-5)); // Only show the latest 5 projects
     }, [currentYear]);
 
     const startResearch = (project) => {

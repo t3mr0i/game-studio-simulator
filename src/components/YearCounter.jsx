@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { GameContext } from '../context/GameContext';
+import Ticker from 'react-ticker';
 
 const gameHistory = [
 "1972 - Pong becomes the first commercially successful video game, accidentally starting the ‘arcade era’ and turning tennis into a digital sensation.",
@@ -183,19 +184,26 @@ const gameHistory = [
 function YearCounter() {
     const { gameTime } = useContext(GameContext);
     const [currentYear, setCurrentYear] = useState(1972);
-    const [currentEvent, setCurrentEvent] = useState(gameHistory[0]);
+    const [currentEvents, setCurrentEvents] = useState([]);
 
     useEffect(() => {
-        const year = Math.floor(gameTime / 60) + 1972; // Assuming each minute is a year
+        const year = Math.floor(gameTime / 360) + 1972; // Slowed down game time
         setCurrentYear(year);
-        const eventIndex = Math.min(year - 1972, gameHistory.length - 1);
-        setCurrentEvent(gameHistory[eventIndex]);
+        const relevantEvents = gameHistory.filter(event => {
+            const eventYear = parseInt(event.split(' - ')[0]);
+            return eventYear === year;
+        });
+        setCurrentEvents(relevantEvents);
     }, [gameTime]);
 
     return (
-        <div className="year-counter">
-            <h2>Current Year: {currentYear}</h2>
-            <p>{currentEvent}</p>
+        <div className="bg-red-600 text-white p-2">
+            <span className="mr-4">Year: {currentYear}</span>
+            <Ticker mode="smooth">
+                {({ index }) => (
+                    <span>{currentEvents[index % currentEvents.length]}</span>
+                )}
+            </Ticker>
         </div>
     );
 }
