@@ -7,9 +7,19 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function GameList({ games }) {
-    const { developGame, releaseGame, clickPower } = useContext(GameContext);
+    const { developGame, releaseGame, clickPower, studioName } = useContext(GameContext);
     const [salesData, setSalesData] = useState({});
     const [gamePrices, setGamePrices] = useState({});
+
+    const generateRandomStudioName = () => {
+        const adjectives = ['Awesome', 'Brilliant', 'Creative', 'Dynamic', 'Eccentric'];
+        const nouns = ['Games', 'Studios', 'Interactive', 'Entertainment', 'Creations'];
+        const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+        const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+        return `${randomAdjective} ${randomNoun}`;
+    };
+
+    const displayStudioName = studioName || generateRandomStudioName();
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -61,7 +71,9 @@ function GameList({ games }) {
         <div className="space-y-8">
             {games.map((game) => (
                 <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
-                    <h3 className="text-2xl font-bold text-kb-black mb-4">{game.name}</h3>
+                    <h3 className="text-2xl font-bold text-kb-black mb-4">
+                        {game.name} <span className="text-sm text-kb-grey">by {displayStudioName}</span>
+                    </h3>
                     <p className="text-kb-grey mb-2">Genre: {game.genre}</p>
                     <p className="text-kb-grey mb-4">Points: {game.points.toFixed(0)}</p>
                     {!game.isReleased ? (

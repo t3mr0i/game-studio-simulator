@@ -1,7 +1,6 @@
 // src/context/GameContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { genres } from '../data/genres';
-import { toast } from 'react-toastify';
 import { customToast } from '../utils/toast';
 
 export const GameContext = createContext();
@@ -20,6 +19,8 @@ export const GameContextProvider = ({ children }) => {
     const [activeGames, setActiveGames] = useState([]);
     const [historicalGames, setHistoricalGames] = useState([]);
     const [completedResearch, setCompletedResearch] = useState([]);
+    const [studioName, setStudioName] = useState('');
+    const [studioReputation, setStudioReputation] = useState(0);
 
     const createGame = useCallback((gameName, genreId) => {
         const genre = genres.find(g => g.id === genreId);
@@ -64,15 +65,23 @@ export const GameContextProvider = ({ children }) => {
             setFunds(prevFunds => prevFunds - workerCosts[type]);
             addNewsItem(`A new ${type} worker joined your team!`);
         } else {
-            toast.error(`Not enough funds to hire a ${type} worker.`);
+            customToast.error(`Not enough funds to hire a ${type} worker.`);
         }
     }, [funds]);
+
+    const updateReputation = useCallback((gameRating) => {
+        setStudioReputation(prevReputation => {
+            const reputationChange = (gameRating - 50) / 10; // -5 to +5
+            return Math.max(0, Math.min(100, prevReputation + reputationChange));
+        });
+    }, []);
 
     const releaseGame = useCallback((gameId, price) => {
         setGames(prevGames => prevGames.map(game => {
             if (game.id === gameId && !game.isReleased && game.points >= 1000 && game.stage === 'testing') {
                 const rating = Math.min(100, Math.max(0, (game.points / 20) + (Math.random() * 20 - 10)));
                 const metacriticScore = Math.floor(rating);
+                updateReputation(rating);
                 return { 
                     ...game, 
                     isReleased: true, 
@@ -87,7 +96,7 @@ export const GameContextProvider = ({ children }) => {
             }
             return game;
         }));
-    }, []);
+    }, [updateReputation]);
 
     const upgradeClickPower = useCallback(() => {
         const cost = Math.floor(100 * Math.pow(1.1, clickPower));
@@ -96,7 +105,7 @@ export const GameContextProvider = ({ children }) => {
             setFunds(prevFunds => prevFunds - cost);
             addNewsItem("Your clicking efficiency has improved!");
         } else {
-            toast.error(`Not enough funds to upgrade click power. You need $${cost}.`);
+            customToast.error(`Not enough funds to upgrade click power. You need $${cost}.`);
         }
     }, [clickPower, funds]);
 
@@ -107,7 +116,7 @@ export const GameContextProvider = ({ children }) => {
             setFunds(prevFunds => prevFunds - cost);
             addNewsItem("Your auto-clicking power has increased!");
         } else {
-            toast.error(`Not enough funds to upgrade auto-click power. You need $${cost}.`);
+            customToast.error(`Not enough funds to upgrade auto-click power. You need $${cost}.`);
         }
     }, [autoClickPower, funds]);
 
@@ -159,39 +168,6 @@ export const GameContextProvider = ({ children }) => {
         setHistoricalGames(historical);
     }, [games]);
 
-    const gameEvents = [
-        { text: "A meme about your latest game has gone viral!", effect: () => setFunds(prev => prev + 1000) },
-        { text: "Your lead developer found a productivity hack!", effect: () => setClickPower(prev => prev + 1) },
-        { text: "A minor bug was discovered in your flagship game.", effect: () => setFunds(prev => prev - 500) },
-        { text: "Your studio was featured in a game development magazine!", effect: () => setPrestigePoints(prev => prev + 1) },
-        { text: "One of your games unexpectedly topped the charts in a foreign country!", effect: () => setFunds(prev => prev + 2000) },
-        { text: "A famous streamer played your game on their channel, boosting sales!", effect: () => setFunds(prev => prev + 1500) },
-        { text: "Your team won a 'Best Indie Developer' award at a gaming convention.", effect: () => setPrestigePoints(prev => prev + 2) },
-        { text: "A disgruntled ex-employee leaked some of your game's source code online.", effect: () => setFunds(prev => prev - 1000) },
-        { text: "Your studio's creative brainstorming session led to an innovative game mechanic!", effect: () => setResearchPoints(prev => prev + 50) },
-        { text: "A power outage caused your team to lose a day of work.", effect: () => setGames(prev => prev.map(g => g.isReleased ? g : {...g, points: g.points - 10})) },
-        { text: "Your marketing team's new campaign went viral on social media!", effect: () => setFunds(prev => prev + 1200) },
-        { text: "A senior developer quit unexpectedly, causing a temporary setback.", effect: () => setClickPower(prev => Math.max(1, prev - 1)) },
-        { text: "Your studio's charity livestream event was a huge success!", effect: () => setPrestigePoints(prev => prev + 3) },
-        { text: "An industry veteran joined your team, bringing years of experience!", effect: () => setClickPower(prev => prev + 2) },
-        { text: "Your game's soundtrack gained popularity and charted on music streaming platforms.", effect: () => setFunds(prev => prev + 800) },
-        { text: "A competitor's game release overshadowed your recent launch.", effect: () => setFunds(prev => prev - 700) },
-        { text: "Your team successfully optimized the game engine, improving performance!", effect: () => setResearchPoints(prev => prev + 30) },
-        { text: "A gaming website published a glowing preview of your upcoming game.", effect: () => setPrestigePoints(prev => prev + 1) },
-        { text: "Your studio's internship program discovered an exceptionally talented new developer!", effect: () => setClickPower(prev => prev + 1) },
-        { text: "A hardware manufacturer wants to bundle your game with their new device!", effect: () => setFunds(prev => prev + 2500) },
-        { text: "Your game's innovative user interface won a design award.", effect: () => setPrestigePoints(prev => prev + 2) },
-        { text: "A critical security flaw was found in your game's multiplayer system.", effect: () => setFunds(prev => prev - 1500) },
-        { text: "Your studio's game jam produced a promising prototype for a new game!", effect: () => setResearchPoints(prev => prev + 40) },
-        { text: "A popular YouTuber made a video essay praising your game's narrative.", effect: () => setFunds(prev => prev + 1000) },
-        { text: "Your team successfully ported one of your games to a new platform.", effect: () => setFunds(prev => prev + 1800) },
-        { text: "An unexpected server outage temporarily took down your game's online features.", effect: () => setFunds(prev => prev - 800) },
-        { text: "Your studio's booth at a major gaming convention was a hit with attendees!", effect: () => setPrestigePoints(prev => prev + 2) },
-        { text: "A collaborative project with a well-known IP holder fell through last minute.", effect: () => setFunds(prev => prev - 2000) },
-        { text: "Your game's modding community created an impressive total conversion mod!", effect: () => setResearchPoints(prev => prev + 60) },
-        { text: "An anonymous donor provided funding for your next project!", effect: () => setFunds(prev => prev + 3000) },
-    ];
-
     useEffect(() => {
         const interval = setInterval(() => {
             setGameTime(prevTime => prevTime + 1);
@@ -241,25 +217,10 @@ export const GameContextProvider = ({ children }) => {
             // Generate research points
             setResearchPoints(prevPoints => prevPoints + workers.length * 0.1);
 
-            // Random events (now less frequent, about once every 2 minutes on average)
-            if (Math.random() < 0.05) { // 0.8% chance each second
-                const event = gameEvents[Math.floor(Math.random() * gameEvents.length)];
-                addNewsItem({ text: event.text, time: Date.now() });
-                event.effect();
-            }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [games, workers, autoClickPower, prestigePoints, addNewsItem]);
-
-    // Generate research points based on the number of developers
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setResearchPoints(prevPoints => prevPoints + workers.length * 0.1);
-        }, 1000); // Generate points every second
-
-        return () => clearInterval(interval);
-    }, [workers]);
+    }, [games, workers, autoClickPower, prestigePoints]);
 
     return (
         <GameContext.Provider value={{ 
@@ -273,6 +234,11 @@ export const GameContextProvider = ({ children }) => {
             setCompletedResearch,
             setFunds,
             addNewsItem,
+            studioName,
+            setStudioName,
+            studioReputation,
+            setStudioReputation,
+            updateReputation,
         }}>
             {children}
         </GameContext.Provider>

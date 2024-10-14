@@ -6,7 +6,7 @@ import { GameContext } from '../context/GameContext';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function GameHistory({ games }) {
-    const { funds, setFunds } = useContext(GameContext);
+    const { funds, setFunds, studioName } = useContext(GameContext);
     const [analysisResults, setAnalysisResults] = useState({});
 
     const getMetacriticColor = (score) => {
@@ -57,7 +57,9 @@ function GameHistory({ games }) {
         <div className="space-y-8">
             {games.map((game) => (
                 <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
-                    <h3 className="text-2xl font-bold text-kb-black mb-4">{game.name}</h3>
+                    <h3 className="text-2xl font-bold text-kb-black mb-4">
+                        {game.name} <span className="text-sm text-kb-grey">by {studioName}</span>
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <p className="text-kb-grey"><span className="font-semibold">Genre:</span> {game.genre}</p>
