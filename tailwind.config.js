@@ -5,30 +5,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'game-primary': '#4CAF50',
-        'game-secondary': '#2196F3',
-        'game-accent': '#FF9800',
-        'game-neutral': '#9E9E9E',
-        'game-base-100': '#1A1A2E',
-        'game-base-200': '#16213E',
-        'game-base-300': '#0F3460',
+        'kb-black': '#131417',
+        'kb-live-red': '#FF4600',
+        'kb-white': '#DEE4EC',
+        'kb-dark-grey': '#474B4E',
+        'kb-grey': '#7E8187',
+        'kb-light-grey': '#A8ADB4',
+      },
+      fontFamily: {
+        'sans': ['Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
     },
   },
-  plugins: [require("daisyui")],
-  daisyui: {
-    themes: [
-      {
-        gamedev: {
-          "primary": "#4CAF50",
-          "secondary": "#2196F3",
-          "accent": "#FF9800",
-          "neutral": "#9E9E9E",
-          "base-100": "#1A1A2E",
-          "base-200": "#16213E",
-          "base-300": "#0F3460",
-        },
-      },
-    ],
-  },
+  plugins: [],
 }

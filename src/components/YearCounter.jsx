@@ -1,6 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { GameContext } from '../context/GameContext';
-import Ticker from 'react-ticker';
 
 const gameHistory = [
 "1972 - Pong becomes the first commercially successful video game, accidentally starting the ‘arcade era’ and turning tennis into a digital sensation.",
@@ -184,26 +183,56 @@ const gameHistory = [
 function YearCounter() {
     const { gameTime } = useContext(GameContext);
     const [currentYear, setCurrentYear] = useState(1972);
-    const [currentEvents, setCurrentEvents] = useState([]);
+    const [tickerPosition, setTickerPosition] = useState(0);
+    const tickerRef = useRef(null);
 
     useEffect(() => {
         const year = Math.floor(gameTime / 360) + 1972; // Slowed down game time
         setCurrentYear(year);
-        const relevantEvents = gameHistory.filter(event => {
-            const eventYear = parseInt(event.split(' - ')[0]);
-            return eventYear === year;
-        });
-        setCurrentEvents(relevantEvents);
     }, [gameTime]);
 
+    const currentYearEvents = useMemo(() => {
+        return gameHistory.filter(event => {
+            const eventYear = parseInt(event.split(' ')[0]);
+            return eventYear === currentYear;
+        });
+    }, [currentYear]);
+
+    useEffect(() => {
+        const ticker = tickerRef.current;
+        if (!ticker || currentYearEvents.length === 0) return;
+
+        const animate = () => {
+            setTickerPosition((prevPosition) => {
+                const newPosition = prevPosition - 1;
+                return newPosition <= -ticker.scrollWidth / 2 ? 0 : newPosition;
+            });
+            requestAnimationFrame(animate);
+        };
+
+        const animationId = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(animationId);
+    }, [currentYearEvents]);
+
+    const tickerStyle = {
+        transform: `translateX(${tickerPosition}px)`,
+        whiteSpace: 'nowrap',
+        display: 'inline-block',
+    };
+
     return (
-        <div className="bg-red-600 text-white p-2">
-            <span className="mr-4">Year: {currentYear}</span>
-            <Ticker mode="smooth">
-                {({ index }) => (
-                    <span>{currentEvents[index % currentEvents.length]}</span>
-                )}
-            </Ticker>
+        <div className="bg-blue-600 text-white p-2 flex items-center">
+            <span className="mr-4 text-2xl font-bold min-w-[120px]">Year: {currentYear}</span>
+            <div className="flex-1 overflow-hidden">
+                <div ref={tickerRef} style={tickerStyle}>
+                    {currentYearEvents.map((event, index) => (
+                        <span key={index} className="mr-8">{event}</span>
+                    ))}
+                    {currentYearEvents.map((event, index) => (
+                        <span key={`repeat-${index}`} className="mr-8">{event}</span>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

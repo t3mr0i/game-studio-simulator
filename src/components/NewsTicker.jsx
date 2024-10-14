@@ -14,8 +14,8 @@ function NewsTicker() {
     }, [newsItems]);
 
     return (
-        <div className="bg-game-accent text-black p-2 overflow-hidden">
-            <p className="whitespace-nowrap animate-marquee">
+        <div className="bg-kb-light-grey text-kb-black p-2 overflow-hidden">
+            <p className="whitespace-nowrap animate-marquee text-sm">
                 {newsItems[currentNewsIndex]}
             </p>
         </div>
