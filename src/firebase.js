@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getDatabase, connectDatabaseEmulator } from "firebase/database";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDU5CvUlbiPoxSGXdzq3q6-ZaBv0pN_kSg",
@@ -18,8 +18,5 @@ const auth = getAuth(app);
 const database = getDatabase(app);
 
 // Use this for local development
-if (process.env.NODE_ENV === 'development') {
-  connectDatabaseEmulator(database, 'localhost', 9000);
-}
 
-export { app, auth, database };
+export { auth, database };

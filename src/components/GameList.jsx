@@ -7,7 +7,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function GameList({ games }) {
-    const { developGame, releaseGame, clickPower, studioName } = useContext(GameContext);
+    const { developGame, releaseGame, clickPower, studioName, setGameImportance } = useContext(GameContext);
     const [salesData, setSalesData] = useState({});
     const [gamePrices, setGamePrices] = useState({});
 
@@ -67,6 +67,10 @@ function GameList({ games }) {
         releaseGame(gameId, price);
     };
 
+    const handleImportanceChange = (gameId, importance) => {
+        setGameImportance(gameId, importance);
+    };
+
     return (
         <div className="space-y-8">
             {games.map((game) => (
@@ -93,6 +97,20 @@ function GameList({ games }) {
                             >
                                 Develop (+{clickPower})
                             </button>
+                            <div className="mb-4">
+                                <label htmlFor={`importance-${game.id}`} className="block text-sm font-medium kb-live-red text-kb-grey">
+                                    Project Importance: {game.importance || 5}
+                                </label>
+                                <input
+                                    type="range"
+                                    id={`importance-${game.id}`}
+                                    min="1"
+                                    max="10"
+                                    value={game.importance || 5}
+                                    onChange={(e) => handleImportanceChange(game.id, parseInt(e.target.value))}
+                                    className="w-full h-2 bg-kb-grey rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
                             {game.points >= 1000 && game.stage === 'testing' && (
                                 <>
                                     <input
@@ -116,7 +134,11 @@ function GameList({ games }) {
                             <p className="text-kb-grey mb-2">Rating: {game.rating.toFixed(1)}</p>
                             <p className="text-kb-grey mb-2">Revenue: ${game.revenue.toFixed(2)}</p>
                             <p className="text-kb-grey mb-2">Price: ${game.price}</p>
-                            <p className="text-kb-grey mb-2">Sales Duration: {game.salesDuration} days</p>
+                            {game.salesDuration > 0 ? (
+                                <p className="text-kb-grey mb-2">Sales Duration: {game.salesDuration} days left</p>
+                            ) : (
+                                <p className="text-kb-grey mb-2">No Longer on Shelves</p>
+                            )}
                             <p className={`font-bold ${getMetacriticColor(game.metacriticScore)} mb-2`}>
                                 Metacritic Score: {game.metacriticScore}
                             </p>

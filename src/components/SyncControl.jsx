@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { GameContext } from '../context/GameContext';
 
 function SyncControl() {
-  const { isOnline, manualSync, conflicts } = useContext(GameContext);
+  const { isOnline, manualSync, conflicts, resolveConflict } = useContext(GameContext);
   const [showConflicts, setShowConflicts] = useState(false);
 
   const handleManualSync = () => {

@@ -4,45 +4,49 @@ import { GameContext } from '../context/GameContext';
 import { genres } from '../data/genres';
 
 function NewGameForm() {
+    const { createGame } = useContext(GameContext);
     const [gameName, setGameName] = useState('');
-    const [genreId, setGenreId] = useState(1);
-    const { createGame, funds } = useContext(GameContext);
+    const [selectedGenre, setSelectedGenre] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (gameName.trim() && funds >= 100) {
-            createGame(gameName, genreId);
+        if (gameName && selectedGenre) {
+            createGame(gameName, selectedGenre);
             setGameName('');
+            setSelectedGenre('');
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 mt-12">
-            <h2 className="text-xl font-bold text-kb-white">Create New Game</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
             <input
                 type="text"
                 value={gameName}
                 onChange={(e) => setGameName(e.target.value)}
-                placeholder="Enter Game Name"
-                className="w-full px-3 py-2 bg-kb-white text-kb-black rounded border border-kb-grey focus:outline-none focus:ring-2 focus:ring-kb-live-red"
+                placeholder="Enter game name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />
             <select
-                value={genreId}
-                onChange={(e) => setGenreId(parseInt(e.target.value))}
-                className="w-full px-3 py-2 bg-kb-white text-kb-black rounded border border-kb-grey focus:outline-none focus:ring-2 focus:ring-kb-live-red"
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-                {genres.map(genre => (
-                    <option key={genre.id} value={genre.id}>
-                        {genre.name}
-                    </option>
-                ))}
+                <option value="">Select a genre</option>
+                {genres && genres.length > 0 ? (
+                    genres.map((genre) => (
+                        <option key={genre.id} value={genre.id}>
+                            {genre.name}
+                        </option>
+                    ))
+                ) : (
+                    <option disabled>No genres available</option>
+                )}
             </select>
-            <button 
-                type="submit" 
-                className="w-full bg-kb-live-red text-kb-black px-4 py-2 rounded hover:bg-opacity-90 transition-colors disabled:bg-kb-grey disabled:cursor-not-allowed"
-                disabled={funds < 100}
+            <button
+                type="submit"
+                className="w-full bg-blue-500 text-white px-4 py-2 rounded-md"
             >
-                Create Game ($100)
+                Create Game
             </button>
         </form>
     );
