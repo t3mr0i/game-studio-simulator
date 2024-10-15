@@ -280,21 +280,95 @@ export const GameContextProvider = ({ children }) => {
                     }
                 }, 0);
                 
-                const newPoints = game.points + clickPower + autoClickPower + workerContribution;
+                const newPoints = game.points + clickPower + workerContribution;
                 let newStage = game.stage;
                 if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
                 if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
                 if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
                 
-                // Generate research points
-                const newResearchPoints = researchPoints + (Math.random() * workerContribution / 10);
-                setResearchPoints(newResearchPoints);
-                
                 return { ...game, points: newPoints, stage: newStage };
             }
             return game;
         }));
-    }, [clickPower, autoClickPower, workers, researchPoints]);
+    }, [clickPower, workers]);
+
+    // Add this effect to handle automatic game development by workers
+    useEffect(() => {
+        const developmentInterval = setInterval(() => {
+            setGames(prevGames => prevGames.map(game => {
+                if (!game.isReleased) {
+                    const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
+                    const workerContribution = assignedWorkers.reduce((sum, worker) => {
+                        switch(worker.type) {
+                            case 'junior': return sum + 0.1;
+                            case 'senior': return sum + 0.3;
+                            case 'expert': return sum + 0.5;
+                            default: return sum;
+                        }
+                    }, 0);
+                    
+                    const newPoints = game.points + workerContribution;
+                    let newStage = game.stage;
+                    if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
+                    if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
+                    if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
+                    
+                    return { ...game, points: newPoints, stage: newStage };
+                }
+                return game;
+            }));
+        }, 1000); // Update every second
+
+        return () => clearInterval(developmentInterval);
+    }, [workers]);
+
+    // Modify this effect to handle worker contributions and auto-click power
+    useEffect(() => {
+        const gameInterval = setInterval(() => {
+            setGames(prevGames => prevGames.map(game => {
+                if (!game.isReleased) {
+                    const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
+                    const workerContribution = assignedWorkers.reduce((sum, worker) => {
+                        switch(worker.type) {
+                            case 'junior': return sum + 1;
+                            case 'senior': return sum + 3;
+                            case 'expert': return sum + 5;
+                            default: return sum;
+                        }
+                    }, 0);
+                    
+                    const newPoints = game.points + workerContribution + autoClickPower;
+                    let newStage = game.stage;
+                    if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
+                    if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
+                    if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
+                    
+                    return { ...game, points: newPoints, stage: newStage };
+                }
+                return game;
+            }));
+
+            // Update game time and current month
+            setGameTime(prevTime => prevTime + 1);
+            setCurrentMonth(prevMonth => (prevMonth + 1) % 12);
+
+            // Generate research points
+            setResearchPoints(prevPoints => {
+                const totalWorkerContribution = workers.reduce((sum, worker) => {
+                    switch(worker.type) {
+                        case 'junior': return sum + 0.1;
+                        case 'senior': return sum + 0.3;
+                        case 'expert': return sum + 0.5;
+                        default: return sum;
+                    }
+                }, 0);
+                return prevPoints + totalWorkerContribution;
+            });
+
+        }, 1000); // Update every second
+
+        return () => clearInterval(gameInterval);
+    }, [workers, autoClickPower]);
 
     const hireWorker = useCallback((type) => {
         let cost;
@@ -336,24 +410,6 @@ export const GameContextProvider = ({ children }) => {
             worker.id === workerId ? { ...worker, assignedTo: null } : worker
         ));
     }, []);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setGames(prevGames => prevGames.map(game => {
-                if (!game.isReleased) {
-                    const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
-                    const workerContribution = assignedWorkers.reduce((sum, worker) => sum + worker.productivity, 0);
-                    return {
-                        ...game,
-                        points: game.points + workerContribution
-                    };
-                }
-                return game;
-            }));
-        }, 1000); // Update every second
-
-        return () => clearInterval(interval);
-    }, [workers]);
 
     const signInWithGoogle = useCallback(() => {
         const provider = new GoogleAuthProvider();

@@ -11,7 +11,7 @@ function GameList({ games }) {
         developGame, 
         releaseGame, 
         clickPower, 
-        upgradeClickPower,
+        autoClickPower,
         studioName, 
         setGameImportance, 
         analyzeGamePerformance, 
@@ -127,11 +127,17 @@ function GameList({ games }) {
                                 Workers: {workers.filter(w => w.assignedTo === game.id).length} 
                                 (Contribution: +{getWorkerContribution(game.id)} points/s)
                             </p>
+                            <p className="text-kb-grey mb-2">
+                                Auto-Click Power: +{autoClickPower} points/s
+                            </p>
+                            <p className="text-kb-grey mb-2">
+                                Total points per second: {getWorkerContribution(game.id) + autoClickPower}
+                            </p>
                             <button
                                 className="w-full bg-kb-live-red text-kb-black px-6 py-3 rounded-lg font-bold text-lg mb-4 hover:bg-opacity-90 transition-colors"
                                 onClick={() => developGame(game.id)}
                             >
-                                Develop (+{clickPower + getWorkerContribution(game.id)})
+                                Develop (+{clickPower} points)
                             </button>
                             <div className="mb-4">
                                 <label htmlFor={`importance-${game.id}`} className="block text-sm font-medium kb-live-red text-kb-grey">
