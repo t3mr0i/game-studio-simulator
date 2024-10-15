@@ -1,9 +1,20 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { GameContext } from '../context/GameContext';
 
 function SaveGameManager() {
-    const { savedGames, saveGame, loadGame, deleteSavedGame } = useContext(GameContext);
+    const { savedGames, saveGame, loadGame, deleteSavedGame, loadSavedGames } = useContext(GameContext);
     const [newSaveName, setNewSaveName] = useState('');
+    const [sortedSavedGames, setSortedSavedGames] = useState([]);
+
+    useEffect(() => {
+        // Sort saved games by timestamp, most recent first
+        const sorted = [...savedGames].sort((a, b) => b.timestamp - a.timestamp);
+        setSortedSavedGames(sorted);
+    }, [savedGames]);
+
+    useEffect(() => {
+        loadSavedGames();
+    }, [loadSavedGames]);
 
     const handleSave = () => {
         if (newSaveName.trim()) {
@@ -33,7 +44,7 @@ function SaveGameManager() {
                 </button>
             </div>
             <div className="space-y-2">
-                {savedGames.map((save) => (
+                {sortedSavedGames.map((save) => (
                     <div key={save.id} className="flex justify-between items-center bg-kb-light-grey p-2 rounded">
                         <span>{save.saveName} - {new Date(save.timestamp).toLocaleString()}</span>
                         <div>

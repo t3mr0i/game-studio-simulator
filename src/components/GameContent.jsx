@@ -74,10 +74,7 @@ function GameContent() {
         </main>
       </div>
       
-      <footer className="bg-kb-black p-4 flex justify-between">
-        <button onClick={saveGameState} className="bg-kb-live-red text-kb-black px-4 py-2 rounded hover:bg-opacity-90 transition-colors">Save Game</button>
-        <button onClick={loadGameState} className="bg-kb-grey text-kb-white px-4 py-2 rounded hover:bg-opacity-90 transition-colors">Load Game</button>
-      </footer>
+
     </div>
   );
 }

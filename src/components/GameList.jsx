@@ -24,12 +24,12 @@ function GameList({ games }) {
     useEffect(() => {
         const interval = setInterval(() => {
             games.forEach(game => {
-                if (game.isReleased && game.salesDuration > 0) {
+                if (game.isReleased) {
                     setSalesData(prevData => ({
                         ...prevData,
                         [game.id]: [
                             ...(prevData[game.id] || []),
-                            { x: 30 - game.salesDuration, y: game.soldUnits }
+                            { x: game.soldUnits, y: game.revenue }
                         ]
                     }));
                 }
@@ -143,12 +143,12 @@ function GameList({ games }) {
                                 Metacritic Score: {game.metacriticScore}
                             </p>
                             <p className="text-kb-grey mb-4">Units Sold: {game.soldUnits.toLocaleString()}</p>
-                            {salesData[game.id] && (
+                            {salesData[game.id] && salesData[game.id].length > 1 ? (
                                 <div className="h-60">
                                     <Line
                                         data={{
                                             datasets: [{
-                                                label: 'Units Sold',
+                                                label: 'Revenue',
                                                 data: salesData[game.id],
                                                 borderColor: '#FF4600',
                                                 tension: 0.1
@@ -163,19 +163,21 @@ function GameList({ games }) {
                                                     position: 'bottom',
                                                     title: {
                                                         display: true,
-                                                        text: 'Days Since Release'
+                                                        text: 'Units Sold'
                                                     }
                                                 },
                                                 y: {
                                                     title: {
                                                         display: true,
-                                                        text: 'Units Sold'
+                                                        text: 'Revenue ($)'
                                                     }
                                                 }
                                             }
                                         }}
                                     />
                                 </div>
+                            ) : (
+                                <p className="text-kb-grey mb-2">Not enough sales data for graph</p>
                             )}
                         </>
                     )}

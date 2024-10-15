@@ -25,8 +25,7 @@ function App() {
         <GameContextProvider>
             {user ? <GameContent /> : <Auth />}
             <ToastContainer />
-            <SyncStatus />
-            <SyncControl />
+        
         </GameContextProvider>
     );
 }
