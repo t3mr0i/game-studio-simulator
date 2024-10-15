@@ -7,7 +7,7 @@ import NewsTicker from './NewsTicker';
 import Sidebar from './Sidebar';
 
 function GameContent() {
-  const { funds, totalClicks, saveGameState, loadGameState, games } = useContext(GameContext);
+  const { gameState, saveGameState, loadGameState, games } = useContext(GameContext);
   const [activeTab, setActiveTab] = useState('active');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -43,7 +43,7 @@ function GameContent() {
           </button>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="bg-kb-grey px-3 py-1 rounded text-kb-white">Funds: ${funds.toFixed(2)}</span>
+          <span className="bg-kb-grey px-3 py-1 rounded text-kb-white">Funds: ${gameState.money.toFixed(2)}</span>
         </div>
       </header>
       
@@ -73,8 +73,6 @@ function GameContent() {
           </div>
         </main>
       </div>
-      
-
     </div>
   );
 }

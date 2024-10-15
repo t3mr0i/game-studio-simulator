@@ -1,5 +1,5 @@
 // src/context/GameContext.jsx
-import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { auth, database } from '../firebase';
 import { ref, set, get, onValue, push, remove } from 'firebase/database';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
@@ -10,881 +10,232 @@ import { generalEvents, genreSpecificEvents } from '../components/GameEvents';
 export const GameContext = createContext();
 
 export const GameContextProvider = ({ children }) => {
-    const [games, setGames] = useState([]);
-    const [workers, setWorkers] = useState([]);
-    const [funds, setFunds] = useState(10000);
-    const [totalClicks, setTotalClicks] = useState(0);
-    const [clickPower, setClickPower] = useState(1);
-    const [autoClickPower, setAutoClickPower] = useState(0);
-    const [gameTime, setGameTime] = useState(0);
-    const [prestigePoints, setPrestigePoints] = useState(0);
-    const [researchPoints, setResearchPoints] = useState(0);
-    const [newsItems, setNewsItems] = useState([]);
-    const [studioName, setStudioName] = useState('New Studio');
-    const [studioReputation, setStudioReputation] = useState(0);
-    const [completedResearch, setCompletedResearch] = useState([]);
-
     const [user, setUser] = useState(null);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [isOnlineMode, setIsOnlineMode] = useState(true);
-    const [conflicts, setConflicts] = useState([]);
-
-    const [marketTrends, setMarketTrends] = useState({});
-    const [events, setEvents] = useState([]);
-
-    const [savedGames, setSavedGames] = useState([]);
-
-    const gamesRef = useRef(games);
-    const fundsRef = useRef(funds);
-
-    const [currentYear, setCurrentYear] = useState(1972);
-    const [currentMonth, setCurrentMonth] = useState(0);
-
-    const [isTimeRunning, setIsTimeRunning] = useState(false);
-    const timeIntervalRef = useRef(null);
-
-    const [currentEvent, setCurrentEvent] = useState(null);
-
-    const saveGameState = useCallback(() => {
-        if (user && user.uid) {
-            const gameState = {
-                games,
-                workers,
-                funds,
-                totalClicks,
-                clickPower,
-                autoClickPower,
-                gameTime,
-                prestigePoints,
-                researchPoints,
-                studioName,
-                studioReputation,
-                completedResearch,
-                marketTrends,
-                events,
-                currentYear,
-                currentMonth,
-                gameTime
-            };
-            set(ref(database, `users/${user.uid}/gameState`), gameState)
-                .then(() => console.log('Game autosaved successfully!'))
-                .catch((error) => console.error('Error autosaving game:', error.message));
-        }
-    }, [user, games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, studioName, studioReputation, completedResearch, marketTrends, events, currentYear, currentMonth]);
-
-    const payWorkerSalaries = useCallback(() => {
-        const totalSalary = workers.reduce((sum, worker) => {
-            switch(worker.type) {
-                case 'junior': return sum + 1000;
-                case 'senior': return sum + 5000;
-                case 'expert': return sum + 10000;
-                default: return sum;
-            }
-        }, 0);
-
-        setFunds(prevFunds => {
-            const newFunds = prevFunds - totalSalary;
-            if (newFunds < 0) {
-                customToast.error(`You're in debt! Current balance: $${newFunds}`);
-            } else {
-                customToast.info(`Paid $${totalSalary} in salaries. Current balance: $${newFunds}`);
-            }
-            return newFunds;
-        });
-    }, [workers]);
-
-    const updateMarketTrends = useCallback(() => {
-        const newTrends = {};
-        genres.forEach(genre => {
-            newTrends[genre.id] = Math.random() * 2 - 1; // Range from -1 to 1
-        });
-        setMarketTrends(newTrends);
-    }, []);
-
-    const updateStudioReputation = useCallback(() => {
-        // Logic to update studio reputation based on game performance, etc.
-    }, []);
-
-    const progressGames = useCallback(() => {
-        setGames(prevGames => prevGames.map(game => {
-            if (!game.isReleased) {
-                const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
-                const workerContribution = assignedWorkers.reduce((sum, worker) => {
-                    switch(worker.type) {
-                        case 'junior': return sum + 1;
-                        case 'senior': return sum + 3;
-                        case 'expert': return sum + 5;
-                        default: return sum;
-                    }
-                }, 0);
-                
-                const newPoints = game.points + workerContribution + autoClickPower;
-                let newStage = game.stage;
-                if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
-                if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
-                if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
-                
-                return { ...game, points: newPoints, stage: newStage };
-            }
-            return game;
-        }));
-    }, [workers, autoClickPower]);
-
-    const generateResearchPoints = useCallback(() => {
-        const totalWorkerContribution = workers.reduce((sum, worker) => {
-            switch(worker.type) {
-                case 'junior': return sum + 0.1;
-                case 'senior': return sum + 0.3;
-                case 'expert': return sum + 0.5;
-                default: return sum;
-            }
-        }, 0);
-        setResearchPoints(prevPoints => prevPoints + totalWorkerContribution);
-    }, [workers]);
-
-    const handleEffect = useCallback((effect) => {
-        switch (effect.type) {
-            case 'UPDATE_GAME':
-                setGames(prevGames => prevGames.map(game => 
-                    game.id === effect.game.id ? effect.game : game
-                ));
-                break;
-            case 'ADD_FUNDS':
-                setFunds(prevFunds => prevFunds + effect.amount);
-                break;
-            case 'SUBTRACT_FUNDS':
-                setFunds(prevFunds => prevFunds - effect.amount);
-                break;
-            case 'START_NEW_GAME':
-                if (funds >= 100) {
-                    setFunds(prevFunds => prevFunds - 100);
-                    const newGame = {
-                        id: games.length,
-                        name: `New ${effect.genre} Game`,
-                        genre: effect.genre,
-                        genreId: effect.genreId,
-                        points: 0,
-                        stage: 'concept',
-                        isReleased: false,
-                        rating: 0,
-                        revenue: 0,
-                        popularity: 10,
-                    };
-                    setGames(prevGames => [...prevGames, newGame]);
-                }
-                break;
-            case 'NO_EFFECT':
-                // Do nothing
-                break;
-            default:
-                console.error('Unknown effect type:', effect.type);
-        }
-    }, [games, funds]);
-
-    const handleEventChoice = useCallback((choice) => {
-        const affectedGame = games[Math.floor(Math.random() * games.length)];
-        const effect = choice.effect(affectedGame);
-
-        if (Array.isArray(effect)) {
-            effect.forEach(handleEffect);
-        } else {
-            handleEffect(effect);
-        }
-
-        setCurrentEvent(null);
-    }, [games, handleEffect]);
-
-    const checkForRandomEvent = useCallback(() => {
-        if (!currentEvent && Math.random() < 0.1) { // 10% chance of event every day
-            const allEvents = [...generalEvents, ...genreSpecificEvents];
-            setCurrentEvent(allEvents[Math.floor(Math.random() * allEvents.length)]);
-        }
-    }, [currentEvent]);
-
-    const advanceTime = useCallback(() => {
-        setGameTime(prevTime => {
-            const newTime = prevTime + 1;
-            const newMonth = Math.floor(newTime / 30) % 12;
-            const newYear = Math.floor(newTime / 360) + 1972;
-
-            if (newMonth !== currentMonth) {
-                setCurrentMonth(newMonth);
-                // Monthly events
-                payWorkerSalaries();
-                updateMarketTrends();
-                saveGameState();
-            }
-
-            if (newYear !== currentYear) {
-                setCurrentYear(newYear);
-                // Yearly events
-                updateStudioReputation();
-            }
-
-            // Daily events
-            progressGames();
-            generateResearchPoints();
-            checkForRandomEvent();
-
-            return newTime;
-        });
-    }, [currentMonth, currentYear, payWorkerSalaries, updateMarketTrends, saveGameState, updateStudioReputation, progressGames, generateResearchPoints, checkForRandomEvent]);
-
-    const startTime = useCallback(() => {
-        if (timeIntervalRef.current) return;
-
-        timeIntervalRef.current = setInterval(() => {
-            advanceTime();
-        }, 1000); // 1 second represents 1 day in game time
-
-        setIsTimeRunning(true);
-    }, [advanceTime]);
-
-    const stopTime = useCallback(() => {
-        if (timeIntervalRef.current) {
-            clearInterval(timeIntervalRef.current);
-            timeIntervalRef.current = null;
-            setIsTimeRunning(false);
-        }
-    }, []);
-
-    // Start the timer automatically when the component mounts
-    useEffect(() => {
-        startTime();
-        return () => {
-            if (timeIntervalRef.current) {
-                clearInterval(timeIntervalRef.current);
-            }
-        };
-    }, [startTime]);
-
-    useEffect(() => {
-        return () => {
-            if (timeIntervalRef.current) {
-                clearInterval(timeIntervalRef.current);
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        gamesRef.current = games;
-    }, [games]);
-
-    useEffect(() => {
-        fundsRef.current = funds;
-    }, [funds]);
-
-    // Autosave every 5 minutes
-    useEffect(() => {
-        const autosaveInterval = setInterval(() => {
-            saveGameState();
-        }, 5 * 60 * 1000);
-
-        return () => clearInterval(autosaveInterval);
-    }, [saveGameState]);
+    const [games, setGames] = useState([]);
+    const [currentGame, setCurrentGame] = useState(null);
+    const [gameState, setGameState] = useState({
+        year: 2023,
+        month: 1,
+        money: 10000,  // Make sure this is included
+        fans: 0,
+        gameProgress: 0,
+        researchPoints: 0,
+        developers: [],
+        workers: [],
+        upgrades: [],
+        genre: '',
+        name: '',
+    });
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user);
             if (user) {
-                loadGameState(user.uid);
+                setUser(user);
+                loadGames(user.uid);
+            } else {
+                setUser(null);
+                setGames([]);
+                setCurrentGame(null);
             }
         });
 
         return () => unsubscribe();
     }, []);
 
-    useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
+    const loadGames = (userId) => {
+        const gamesRef = ref(database, `users/${userId}/games`);
+        onValue(gamesRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const gameList = Object.entries(data).map(([key, value]) => ({
+                    id: key,
+                    ...value,
+                }));
+                setGames(gameList);
+            } else {
+                setGames([]);
+            }
+        });
+    };
 
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
+    const updateGameState = useCallback((updates) => {
+        setGameState((prevState) => ({
+            ...prevState,
+            ...updates,
+        }));
     }, []);
 
-    const toggleOnlineMode = () => {
-        setIsOnlineMode(prev => !prev);
-        if (!isOnlineMode && user) {
-            loadGameState(user.uid);
+    useEffect(() => {
+        const gameLoop = setInterval(() => {
+            updateGameState((prevState) => ({
+                month: prevState.month % 12 + 1,
+                year: prevState.month === 12 ? prevState.year + 1 : prevState.year,
+                money: prevState.money + calculateMoneyPerTick(prevState),
+                fans: prevState.fans + calculateFansPerTick(prevState),
+                gameProgress: prevState.gameProgress + calculateProgressPerTick(prevState),
+                researchPoints: prevState.researchPoints + calculateResearchPerTick(prevState),
+            }));
+        }, 1000); // Tick every second
+
+        return () => clearInterval(gameLoop);
+    }, [updateGameState]);
+
+    // Helper functions to calculate per-tick updates
+    const calculateMoneyPerTick = (state) => {
+        // Implement your logic here based on state
+        return state.fans * 0.1 + state.workers.length * 10;
+    };
+
+    const calculateFansPerTick = (state) => {
+        // Implement your logic here based on state
+        return state.gameProgress * 0.01 + state.developers.length;
+    };
+
+    const calculateProgressPerTick = (state) => {
+        // Implement your logic here based on state
+        return state.developers.length * 0.5;
+    };
+
+    const calculateResearchPerTick = (state) => {
+        // Implement your logic here based on state
+        return state.workers.length * 0.2;
+    };
+
+    const signIn = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Error signing in with Google", error);
         }
     };
 
-    const loadGameState = useCallback((userId) => {
-        const gameStateRef = ref(database, `users/${userId}/gameState`);
-        get(gameStateRef).then((snapshot) => {
-            if (snapshot.exists()) {
-                const gameState = snapshot.val();
-                setGames(gameState.games || []);
-                setWorkers(gameState.workers || []);
-                setFunds(gameState.funds || 10000);
-                setTotalClicks(gameState.totalClicks || 0);
-                setClickPower(gameState.clickPower || 1);
-                setAutoClickPower(gameState.autoClickPower || 0);
-                setGameTime(gameState.gameTime || 0);
-                setPrestigePoints(gameState.prestigePoints || 0);
-                setResearchPoints(gameState.researchPoints || 0);
-                setStudioName(gameState.studioName || 'New Studio');
-                setStudioReputation(gameState.studioReputation || 0);
-                setCompletedResearch(gameState.completedResearch || []);
-                setMarketTrends(gameState.marketTrends || {});
-                setEvents(gameState.events || []);
-                setCurrentYear(gameState.currentYear || 1972);
-                setCurrentMonth(gameState.currentMonth || 0);
-                setGameTime(gameState.gameTime || 0);
-                customToast.success('Game state loaded successfully!');
-            } else {
-                customToast.info('No saved game state found. Starting a new game.');
-            }
-        }).catch((error) => {
-            console.error("Error loading game state:", error);
-            customToast.error('Error loading game state.');
-        });
-    }, []);
-
-    const manualSync = useCallback(() => {
-        if (user && isOnline) {
-            const localState = {
-                games,
-                workers,
-                funds,
-                totalClicks,
-                clickPower,
-                autoClickPower,
-                gameTime,
-                prestigePoints,
-                researchPoints,
-                studioName,
-                studioReputation,
-                completedResearch
-            };
-
-            get(ref(database, `users/${user.uid}/gameState`)).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const serverState = snapshot.val();
-                    const identifiedConflicts = [];
-
-                    Object.keys(localState).forEach(key => {
-                        if (JSON.stringify(localState[key]) !== JSON.stringify(serverState[key])) {
-                            identifiedConflicts.push({
-                                key,
-                                local: localState[key],
-                                server: serverState[key]
-                            });
-                        }
-                    });
-
-                    setConflicts(identifiedConflicts);
-                }
-            }).catch((error) => {
-                console.error("Error during manual sync:", error);
-                customToast.error("Error during manual sync. Please try again.");
-            });
+    const signOut = async () => {
+        try {
+            await auth.signOut();
+            setUser(null);
+            setGames([]);
+            setCurrentGame(null);
+        } catch (error) {
+            console.error("Error signing out", error);
         }
-    }, [user, isOnline, games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, studioName, studioReputation, completedResearch]);
+    };
 
-    const resolveConflict = useCallback((key, choice) => {
-        if (choice === 'local') {
-            // Keep the local state
-            // No action needed as we're already using the local state
-        } else if (choice === 'server') {
-            // Use the server state
-            get(ref(database, `users/${user.uid}/gameState/${key}`)).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const serverValue = snapshot.val();
-                    // Update the local state with the server value
-                    switch(key) {
-                        case 'games':
-                            setGames(serverValue);
-                            break;
-                        case 'workers':
-                            setWorkers(serverValue);
-                            break;
-                        case 'funds':
-                            setFunds(serverValue);
-                            break;
-                        // ... add cases for other state variables
-                        default:
-                            console.warn(`Unhandled state key in conflict resolution: ${key}`);
-                    }
-                }
-            }).catch((error) => {
-                console.error("Error resolving conflict:", error);
-                customToast.error("Error resolving conflict. Please try again.");
-            });
-        }
-        
-        // Remove the resolved conflict from the list
-        setConflicts(prevConflicts => prevConflicts.filter(conflict => conflict.key !== key));
-    }, [user]);
+    const createGame = async (gameName, genre) => {
+        if (!user) return;
 
-    const createGame = useCallback((gameName, genreId) => {
-        if (funds >= 100) {
-            const newGame = {
-                id: games.length,
-                name: gameName,
-                genreId: genreId,
-                points: 0,
-                stage: 'concept',
-                isReleased: false,
-                rating: 0,
-                revenue: 0,
-                popularity: 0,
-                salesDuration: 0,
-                metacriticScore: 0,
-                soldUnits: 0,
-                price: 0,
-                isActive: false,
-                salesData: []
-            };
-            setGames(prevGames => [...prevGames, newGame]);
-            setFunds(prevFunds => prevFunds - 100);
-            saveGameState();
-            customToast.success(`New game "${gameName}" created!`);
-        } else {
-            customToast.error('Not enough funds to create a new game.');
-        }
-    }, [funds, games.length, saveGameState]);
-
-    const developGame = useCallback((gameId) => {
-        setGames(prevGames => prevGames.map(game => {
-            if (game.id === gameId) {
-                const assignedWorkers = workers.filter(worker => worker.assignedTo === gameId);
-                const workerContribution = assignedWorkers.reduce((sum, worker) => {
-                    switch(worker.type) {
-                        case 'junior': return sum + 1;
-                        case 'senior': return sum + 3;
-                        case 'expert': return sum + 5;
-                        default: return sum;
-                    }
-                }, 0);
-                
-                const newPoints = game.points + clickPower;
-                let newStage = game.stage;
-                if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
-                if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
-                if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
-                
-                return { ...game, points: newPoints, stage: newStage };
-            }
-            return game;
-        }));
-    }, [clickPower, workers]);
-
-    // Effect to handle automatic game development by workers
-    useEffect(() => {
-        const developmentInterval = setInterval(() => {
-            setGames(prevGames => prevGames.map(game => {
-                if (!game.isReleased) {
-                    const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
-                    const workerContribution = assignedWorkers.reduce((sum, worker) => {
-                        switch(worker.type) {
-                            case 'junior': return sum + 1;
-                            case 'senior': return sum + 3;
-                            case 'expert': return sum + 5;
-                            default: return sum;
-                        }
-                    }, 0);
-                    
-                    const newPoints = game.points + workerContribution + autoClickPower;
-                    let newStage = game.stage;
-                    if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
-                    if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
-                    if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
-                    
-                    return { ...game, points: newPoints, stage: newStage };
-                }
-                return game;
-            }));
-        }, 1000); // Update every second
-
-        return () => clearInterval(developmentInterval);
-    }, [workers, autoClickPower]);
-
-    // Modify this effect to prevent infinite updates
-    useEffect(() => {
-        const gameInterval = setInterval(() => {
-            setGames(prevGames => {
-                let updated = false;
-                const newGames = prevGames.map(game => {
-                    if (!game.isReleased) {
-                        const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
-                        const workerContribution = assignedWorkers.reduce((sum, worker) => {
-                            switch(worker.type) {
-                                case 'junior': return sum + 1;
-                                case 'senior': return sum + 3;
-                                case 'expert': return sum + 5;
-                                default: return sum;
-                            }
-                        }, 0);
-                        
-                        const newPoints = game.points + workerContribution + autoClickPower;
-                        let newStage = game.stage;
-                        if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
-                        if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
-                        if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
-                        
-                        if (newPoints !== game.points || newStage !== game.stage) {
-                            updated = true;
-                            return { ...game, points: newPoints, stage: newStage };
-                        }
-                    }
-                    return game;
-                });
-
-                if (updated) {
-                    return newGames;
-                }
-                return prevGames;
-            });
-
-            setResearchPoints(prevPoints => {
-                const totalWorkerContribution = workers.reduce((sum, worker) => {
-                    switch(worker.type) {
-                        case 'junior': return sum + 0.1;
-                        case 'senior': return sum + 0.3;
-                        case 'expert': return sum + 0.5;
-                        default: return sum;
-                    }
-                }, 0);
-                return prevPoints + totalWorkerContribution;
-            });
-
-        }, 1000);
-
-        return () => clearInterval(gameInterval);
-    }, [workers, autoClickPower]);
-
-    const hireWorker = useCallback((type) => {
-        let cost;
-        let productivity;
-        switch(type) {
-            case 'junior':
-                cost = 1000;
-                productivity = 1;
-                break;
-            case 'senior':
-                cost = 5000;
-                productivity = 3;
-                break;
-            case 'expert':
-                cost = 10000;
-                productivity = 5;
-                break;
-            default:
-                return;
-        }
-
-        if (funds >= cost) {
-            setFunds(prevFunds => prevFunds - cost);
-            setWorkers(prevWorkers => [...prevWorkers, { id: Date.now(), type, productivity, assignedTo: null }]);
-            customToast.success(`Hired a new ${type} developer!`);
-        } else {
-            customToast.error('Not enough funds to hire this developer.');
-        }
-    }, [funds]);
-
-    const assignWorker = useCallback((workerId, gameId) => {
-        setWorkers(prevWorkers => prevWorkers.map(worker => 
-            worker.id === workerId ? { ...worker, assignedTo: gameId } : worker
-        ));
-    }, []);
-
-    const unassignWorker = useCallback((workerId) => {
-        setWorkers(prevWorkers => prevWorkers.map(worker => 
-            worker.id === workerId ? { ...worker, assignedTo: null } : worker
-        ));
-    }, []);
-
-    const signInWithGoogle = useCallback(() => {
-        const provider = new GoogleAuthProvider();
-        signInWithPopup(auth, provider)
-            .then((result) => {
-                const user = result.user;
-                customToast.success('Signed in successfully!');
-                loadGameState(user.uid);
-            }).catch((error) => {
-                const errorMessage = error.message;
-                customToast.error(`Sign-in error: ${errorMessage}`);
-            });
-    }, []);
-
-    const setGameImportance = useCallback((gameId, importance) => {
-        setGames(prevGames => prevGames.map(game => 
-            game.id === gameId ? { ...game, importance } : game
-        ));
-        saveGameState();
-    }, []);
-
-    const redistributeWorkers = useCallback(() => {
-        const unreleasedGames = games.filter(game => !game.isReleased);
-        const totalImportance = unreleasedGames.reduce((sum, game) => sum + (game.importance || 5), 0);
-
-        const newWorkers = workers.map(worker => {
-            if (unreleasedGames.length === 0) {
-                return { ...worker, assignedTo: null };
-            }
-
-            const randomValue = Math.random() * totalImportance;
-            let cumulativeImportance = 0;
-
-            for (const game of unreleasedGames) {
-                cumulativeImportance += game.importance || 5;
-                if (randomValue <= cumulativeImportance) {
-                    return { ...worker, assignedTo: game.id };
-                }
-            }
-
-            return { ...worker, assignedTo: unreleasedGames[unreleasedGames.length - 1].id };
-        });
-
-        setWorkers(newWorkers);
-    }, [games, workers]);
-
-    useEffect(() => {
-        redistributeWorkers();
-    }, [games, workers.length, redistributeWorkers]);
-
-    const releaseGame = useCallback((gameId, price) => {
-        setGames(prevGames => prevGames.map(game => {
-            if (game.id === gameId) {
-                return {
-                    ...game,
-                    isReleased: true,
-                    price: parseFloat(price),
-                    salesDuration: 30, // 30 days of sales
-                    metacriticScore: Math.floor(Math.random() * 41) + 60, // Random score between 60-100
-                    soldUnits: 0,
-                    revenue: 0,
-                    releaseDate: Date.now(),
-                    salesHistory: [] // Add this to track daily sales
-                };
-            }
-            return game;
-        }));
-        saveGameState();
-    }, [saveGameState]);
-
-    // Update this effect to handle game sales and add revenue to funds
-    useEffect(() => {
-        const salesInterval = setInterval(() => {
-            let totalDailyRevenue = 0;
-            const updatedGames = gamesRef.current.map(game => {
-                if (game.isReleased && game.salesDuration > 0) {
-                    const baseSales = Math.floor(Math.random() * 100) + 50;
-                    const priceMultiplier = Math.max(0, 1 - (game.price / 100)); // Higher price reduces sales
-                    const dailySales = Math.floor(baseSales * priceMultiplier);
-                    const newSoldUnits = game.soldUnits + dailySales;
-                    const dailyRevenue = dailySales * game.price;
-                    const newRevenue = game.revenue + dailyRevenue;
-                    
-                    totalDailyRevenue += dailyRevenue;
-                    
-                    const newSalesHistory = [...game.salesHistory, { day: 30 - game.salesDuration, sales: dailySales, revenue: dailyRevenue }];
-                    
-                    return {
-                        ...game,
-                        salesDuration: game.salesDuration - 1,
-                        soldUnits: newSoldUnits,
-                        revenue: newRevenue,
-                        salesHistory: newSalesHistory
-                    };
-                }
-                return game;
-            });
-
-            setGames(updatedGames);
-            setFunds(prevFunds => prevFunds + totalDailyRevenue);
-        }, 1000);
-
-        return () => clearInterval(salesInterval);
-    }, []);
-
-    // Add this function to analyze game performance
-    const analyzeGamePerformance = useCallback((gameId) => {
-        const game = games.find(g => g.id === gameId);
-        if (!game || !game.isReleased) return null;
-
-        const totalSales = game.soldUnits;
-        const totalRevenue = game.revenue;
-        const averageDailySales = totalSales / (30 - game.salesDuration);
-        const peakSalesDay = game.salesHistory.reduce((max, day) => day.sales > max.sales ? day : max, game.salesHistory[0]);
-        const salesTrend = game.salesHistory.slice(-7).reduce((sum, day) => sum + day.sales, 0) / 7 - averageDailySales;
-
-        return {
-            totalSales,
-            totalRevenue,
-            averageDailySales,
-            peakSalesDay,
-            salesTrend: salesTrend > 0 ? 'Increasing' : salesTrend < 0 ? 'Decreasing' : 'Stable',
-            metacriticScore: game.metacriticScore,
-            profitMargin: ((totalRevenue - 1000) / totalRevenue) * 100 // Assuming a base cost of 1000 for game development
+        const newGame = {
+            name: gameName,
+            genre: genre,
+            year: 2023,
+            month: 1,
+            money: 10000,
+            fans: 0,
+            gameProgress: 0,
+            researchPoints: 0,
+            developers: [],
+            workers: [],
+            upgrades: [],
         };
-    }, [games]);
 
-    const loadSavedGames = useCallback(() => {
-        if (user && user.uid) {
-            const savedGamesRef = ref(database, `users/${user.uid}/savedGames`);
-            get(savedGamesRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const savedGamesData = snapshot.val();
-                    const savedGamesArray = Object.entries(savedGamesData).map(([key, value]) => ({
-                        id: key,
-                        ...value
-                    }));
-                    setSavedGames(savedGamesArray);
-                } else {
-                    setSavedGames([]);
-                }
-            }).catch((error) => {
-                console.error("Error loading saved games:", error);
-                customToast.error('Error loading saved games.');
-            });
+        try {
+            const gamesRef = ref(database, `users/${user.uid}/games`);
+            const newGameRef = push(gamesRef);
+            await set(newGameRef, newGame);
+            setCurrentGame({ id: newGameRef.key, ...newGame });
+            customToast('success', 'New game created successfully!');
+        } catch (error) {
+            console.error("Error creating new game", error);
+            customToast('error', 'Failed to create new game.');
         }
-    }, [user]);
+    };
 
-    const saveGame = useCallback((saveName) => {
-        if (user && user.uid) {
-            const gameState = {
-                saveName,
-                timestamp: Date.now(),
-                games,
-                workers,
-                funds,
-                totalClicks,
-                clickPower,
-                autoClickPower,
-                gameTime,
-                prestigePoints,
-                researchPoints,
-                studioName,
-                studioReputation,
-                completedResearch,
-                marketTrends,
-                events,
-                currentMonth
-            };
-            push(ref(database, `users/${user.uid}/savedGames`), gameState)
-                .then(() => {
-                    customToast.success('Game saved successfully!');
-                    loadSavedGames();
-                })
-                .catch((error) => customToast.error('Error saving game: ' + error.message));
+    const selectGame = (gameId) => {
+        const selected = games.find(game => game.id === gameId);
+        if (selected) {
+            setCurrentGame(selected);
+            setGameState(selected);
         }
-    }, [user, games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, studioName, studioReputation, completedResearch, marketTrends, events, currentMonth, loadSavedGames]);
+    };
 
-    const loadGame = useCallback((saveId) => {
-        if (user && user.uid) {
-            const saveRef = ref(database, `users/${user.uid}/savedGames/${saveId}`);
-            get(saveRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const gameState = snapshot.val();
-                    setGames(gameState.games || []);
-                    setWorkers(gameState.workers || []);
-                    setFunds(gameState.funds || 10000);
-                    setTotalClicks(gameState.totalClicks || 0);
-                    setClickPower(gameState.clickPower || 1);
-                    setAutoClickPower(gameState.autoClickPower || 0);
-                    setGameTime(gameState.gameTime || 0);
-                    setPrestigePoints(gameState.prestigePoints || 0);
-                    setResearchPoints(gameState.researchPoints || 0);
-                    setStudioName(gameState.studioName || 'New Studio');
-                    setStudioReputation(gameState.studioReputation || 0);
-                    setCompletedResearch(gameState.completedResearch || []);
-                    setMarketTrends(gameState.marketTrends || {});
-                    setEvents(gameState.events || []);
-                    customToast.success('Game loaded successfully!');
-                } else {
-                    customToast.error('Save game not found.');
-                }
-            }).catch((error) => {
-                console.error("Error loading game:", error);
-                customToast.error('Error loading game.');
-            });
-        }
-    }, [user]);
+    const deleteGame = async (gameId) => {
+        if (!user) return;
 
-    const deleteSavedGame = useCallback((saveId) => {
-        if (user && user.uid) {
-            const saveRef = ref(database, `users/${user.uid}/savedGames/${saveId}`);
-            remove(saveRef)
-                .then(() => {
-                    customToast.success('Save game deleted successfully!');
-                    loadSavedGames();
-                })
-                .catch((error) => {
-                    console.error("Error deleting save game:", error);
-                    customToast.error('Error deleting save game.');
-                });
-        }
-    }, [user, loadSavedGames]);
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user);
-            if (user) {
-                loadSavedGames();
+        try {
+            const gameRef = ref(database, `users/${user.uid}/games/${gameId}`);
+            await remove(gameRef);
+            if (currentGame && currentGame.id === gameId) {
+                setCurrentGame(null);
             }
-        });
-
-        return () => unsubscribe();
-    }, [loadSavedGames]);
-
-    const upgradeClickPower = useCallback(() => {
-        const upgradeCost = Math.floor(100 * Math.pow(1.5, clickPower));
-        if (funds >= upgradeCost) {
-            setFunds(prevFunds => prevFunds - upgradeCost);
-            setClickPower(prevPower => prevPower + 1);
-            customToast.success(`Click power upgraded to ${clickPower + 1}!`);
-        } else {
-            customToast.error('Not enough funds to upgrade click power.');
+            customToast('success', 'Game deleted successfully!');
+        } catch (error) {
+            console.error("Error deleting game", error);
+            customToast('error', 'Failed to delete game.');
         }
-    }, [funds, clickPower]);
+    };
 
-    const upgradeAutoClickPower = useCallback(() => {
-        const upgradeCost = Math.floor(200 * Math.pow(1.5, autoClickPower));
-        if (funds >= upgradeCost) {
-            setFunds(prevFunds => prevFunds - upgradeCost);
-            setAutoClickPower(prevPower => prevPower + 1);
-            customToast.success(`Auto-click power upgraded to ${autoClickPower + 1}!`);
-        } else {
-            customToast.error('Not enough funds to upgrade auto-click power.');
+    const saveGame = async () => {
+        if (!user || !currentGame) return;
+
+        try {
+            const gameRef = ref(database, `users/${user.uid}/games/${currentGame.id}`);
+            await set(gameRef, gameState);
+            customToast('success', 'Game saved successfully!');
+        } catch (error) {
+            console.error("Error saving game", error);
+            customToast('error', 'Failed to save game.');
         }
-    }, [funds, autoClickPower]);
+    };
+
+    const hireDeveloper = (developer) => {
+        if (gameState.money >= developer.cost) {
+            updateGameState({
+                developers: [...gameState.developers, developer],
+                money: gameState.money - developer.cost
+            });
+        } else {
+            customToast('error', 'Not enough money to hire developer.');
+        }
+    };
+
+    const hireWorker = (worker) => {
+        if (gameState.money >= worker.cost) {
+            updateGameState({
+                workers: [...gameState.workers, worker],
+                money: gameState.money - worker.cost
+            });
+        } else {
+            customToast('error', 'Not enough money to hire worker.');
+        }
+    };
+
+    const buyUpgrade = (upgrade) => {
+        if (gameState.money >= upgrade.cost) {
+            updateGameState({
+                upgrades: [...gameState.upgrades, upgrade],
+                money: gameState.money - upgrade.cost
+            });
+        } else {
+            customToast('error', 'Not enough money to buy upgrade.');
+        }
+    };
 
     return (
-        <GameContext.Provider value={{ 
-            games, setGames, workers, setWorkers, funds, setFunds, 
-            totalClicks, setTotalClicks, clickPower, setClickPower, 
-            autoClickPower, setAutoClickPower, gameTime, setGameTime, 
-            prestigePoints, setPrestigePoints, researchPoints, setResearchPoints, 
-            newsItems, setNewsItems, studioName, setStudioName, 
-            studioReputation, setStudioReputation, completedResearch, setCompletedResearch,
-            user, isOnline, isOnlineMode, toggleOnlineMode,
-            manualSync, resolveConflict, conflicts,
-            createGame, developGame, releaseGame, // Make sure releaseGame is included here
-            hireWorker, setGameImportance,
-            signInWithGoogle, loadGameState, saveGameState,
-            savedGames,
+        <GameContext.Provider value={{
+            user,
+            games,
+            currentGame,
+            gameState,
+            signIn,
+            signOut,
+            createGame,
+            selectGame,
+            deleteGame,
             saveGame,
-            loadGame,
-            deleteSavedGame,
-            loadSavedGames,
-            analyzeGamePerformance,
-            gameTime,
-            currentYear,
-            currentMonth,
-            upgradeClickPower,
-            upgradeAutoClickPower,
-            startTime,
-            stopTime,
-            isTimeRunning,
-            currentEvent,
-            handleEventChoice
+            hireDeveloper,
+            hireWorker,
+            buyUpgrade,
+            updateGameState
         }}>
             {children}
         </GameContext.Provider>
