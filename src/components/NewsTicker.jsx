@@ -2,16 +2,16 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { GameContext } from '../context/GameContext';
 
 const NewsTicker = () => {
-    const { newsItems } = useContext(GameContext);
+    const { gameState } = useContext(GameContext);
     const [currentNews, setCurrentNews] = useState(null);
     const [tickerPosition, setTickerPosition] = useState(0);
     const tickerRef = useRef(null);
 
     useEffect(() => {
-        if (newsItems.length > 0 && !currentNews) {
-            setCurrentNews(newsItems[0]);
+        if (gameState?.newsItems && gameState.newsItems.length > 0 && !currentNews) {
+            setCurrentNews(gameState.newsItems[0]);
         }
-    }, [newsItems, currentNews]);
+    }, [gameState?.newsItems, currentNews]);
 
     useEffect(() => {
         if (!currentNews || !tickerRef.current) return;
@@ -31,7 +31,7 @@ const NewsTicker = () => {
                 requestAnimationFrame(animate);
             } else {
                 // Move to next news item
-                setCurrentNews(newsItems[newsItems.indexOf(currentNews) + 1] || newsItems[0]);
+                setCurrentNews(gameState.newsItems[gameState.newsItems.indexOf(currentNews) + 1] || gameState.newsItems[0]);
                 setTickerPosition(0);
             }
         };
@@ -39,7 +39,7 @@ const NewsTicker = () => {
         const animationId = requestAnimationFrame(animate);
 
         return () => cancelAnimationFrame(animationId);
-    }, [currentNews, newsItems]);
+    }, [currentNews, gameState?.newsItems]);
 
     if (!currentNews) return null;
 

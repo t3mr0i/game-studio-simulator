@@ -11,8 +11,8 @@ function GameContent() {
   const [activeTab, setActiveTab] = useState('active');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const activeGames = games.filter(game => !game.isReleased);
-  const historicalGames = games.filter(game => game.isReleased);
+  const activeGames = games?.filter(game => !game.isReleased) || [];
+  const historicalGames = games?.filter(game => game.isReleased) || [];
 
   useEffect(() => {
     const handleResize = () => {
@@ -43,7 +43,7 @@ function GameContent() {
           </button>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="bg-kb-grey px-3 py-1 rounded text-kb-white">Funds: ${gameState.money.toFixed(2)}</span>
+          <span className="bg-kb-grey px-3 py-1 rounded text-kb-white">Funds: ${gameState?.money?.toFixed(2) || '0.00'}</span>
         </div>
       </header>
       
@@ -69,7 +69,10 @@ function GameContent() {
                 Game History
               </button>
             </div>
-            {activeTab === 'active' ? <GameList games={activeGames} /> : <GameHistory games={historicalGames} />}
+            {activeTab === 'active' ? 
+              <GameList games={activeGames} /> : 
+              <GameHistory games={historicalGames} />
+            }
           </div>
         </main>
       </div>

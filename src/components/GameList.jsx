@@ -8,15 +8,15 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 function GameList({ games }) {
     const { 
-        developGame, 
         releaseGame, 
         clickPower, 
         autoClickPower,
         studioName, 
         setGameImportance, 
-        analyzeGamePerformance, 
-        workers,
-        funds
+        analyzeGamePerformance,
+        gameState,
+        calculateWorkerContribution,
+        developGame
     } = useContext(GameContext);
     const [salesData, setSalesData] = useState({});
     const [gamePrices, setGamePrices] = useState({});
@@ -32,12 +32,11 @@ function GameList({ games }) {
 
     const displayStudioName = studioName || generateRandomStudioName();
 
+    const workers = gameState.workers || [];
+
     useEffect(() => {
         const interval = setInterval(() => {
             games.forEach(game => {
-                if (!game.isReleased) {
-                    developGame(game.id);
-                }
                 if (game.isReleased && game.salesDuration > 0) {
                     setSalesData(prevData => ({
                         ...prevData,
@@ -51,7 +50,7 @@ function GameList({ games }) {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [games, developGame]);
+    }, [games]);
 
     const getStageColor = (stage) => {
         switch(stage) {
@@ -90,28 +89,15 @@ function GameList({ games }) {
         setAnalyzedGames(prev => ({...prev, [gameId]: analysis}));
     };
 
-    const getWorkerContribution = (gameId) => {
-        const assignedWorkers = workers.filter(worker => worker.assignedTo === gameId);
-        return assignedWorkers.reduce((sum, worker) => {
-            switch(worker.type) {
-                case 'junior': return sum + 1;
-                case 'senior': return sum + 3;
-                case 'expert': return sum + 5;
-                default: return sum;
-            }
-        }, 0);
-    };
-
     return (
         <div className="space-y-8">
-       
             {games.map((game) => (
                 <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
                     <h3 className="text-2xl font-bold text-kb-black mb-4">
                         {game.name} <span className="text-sm text-kb-grey">by {displayStudioName}</span>
                     </h3>
                     <p className="text-kb-grey mb-2">Genre: {game.genre}</p>
-                    <p className="text-kb-grey mb-4">Points: {game.points.toFixed(0)}</p>
+                    <p className="text-kb-grey mb-4">Points: {game.points?.toFixed(0) ?? '0'}</p>
                     {!game.isReleased ? (
                         <>
                             <div className={`text-center p-3 mb-4 ${getStageColor(game.stage)} text-kb-white rounded-lg font-bold`}>
@@ -125,13 +111,13 @@ function GameList({ games }) {
                             </div>
                             <p className="text-kb-grey mb-2">
                                 Workers: {workers.filter(w => w.assignedTo === game.id).length} 
-                                (Contribution: +{getWorkerContribution(game.id)} points/s)
+                                (Contribution: +{calculateWorkerContribution(game.id, workers)} points/s)
                             </p>
                             <p className="text-kb-grey mb-2">
                                 Auto-Click Power: +{autoClickPower} points/s
                             </p>
                             <p className="text-kb-grey mb-2">
-                                Total points per second: {getWorkerContribution(game.id) + autoClickPower}
+                                Total points per second: {calculateWorkerContribution(game.id, workers) + autoClickPower}
                             </p>
                             <button
                                 className="w-full bg-kb-live-red text-kb-black px-6 py-3 rounded-lg font-bold text-lg mb-4 hover:bg-opacity-90 transition-colors"
@@ -173,9 +159,9 @@ function GameList({ games }) {
                         </>
                     ) : (
                         <>
-                            <p className="text-kb-grey mb-2">Rating: {game.rating.toFixed(1)}</p>
-                            <p className="text-kb-grey mb-2">Revenue: ${game.revenue.toFixed(2)}</p>
-                            <p className="text-kb-grey mb-2">Price: ${game.price}</p>
+                            <p className="text-kb-grey mb-2">Rating: {game.rating?.toFixed(1) ?? 'N/A'}</p>
+                            <p className="text-kb-grey mb-2">Revenue: ${game.revenue?.toFixed(2) ?? '0.00'}</p>
+                            <p className="text-kb-grey mb-2">Price: ${game.price ?? '0.00'}</p>
                             {game.salesDuration > 0 ? (
                                 <p className="text-kb-grey mb-2">Sales Duration: {game.salesDuration} days left</p>
                             ) : (
@@ -184,7 +170,7 @@ function GameList({ games }) {
                             <p className={`font-bold ${getMetacriticColor(game.metacriticScore)} mb-2`}>
                                 Metacritic Score: {game.metacriticScore}
                             </p>
-                            <p className="text-kb-grey mb-4">Units Sold: {game.soldUnits.toLocaleString()}</p>
+                            <p className="text-kb-grey mb-4">Units Sold: {game.soldUnits?.toLocaleString() ?? '0'}</p>
                             {salesData[game.id] && salesData[game.id].length > 1 ? (
                                 <div className="h-60">
                                     <Line

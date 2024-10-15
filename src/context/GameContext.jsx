@@ -3,7 +3,6 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { auth, database } from '../firebase';
 import { ref, set, get, onValue, push, remove } from 'firebase/database';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-import { customToast } from '../utils/toast';
 import { genres } from '../data/genres';
 import { generalEvents, genreSpecificEvents } from '../components/GameEvents';
 
@@ -25,6 +24,7 @@ export const GameContextProvider = ({ children }) => {
         upgrades: [],
         genre: '',
         name: '',
+        newsItems: [], // Added this property
     });
 
     useEffect(() => {
@@ -67,18 +67,57 @@ export const GameContextProvider = ({ children }) => {
 
     useEffect(() => {
         const gameLoop = setInterval(() => {
-            updateGameState((prevState) => ({
-                month: prevState.month % 12 + 1,
-                year: prevState.month === 12 ? prevState.year + 1 : prevState.year,
-                money: prevState.money + calculateMoneyPerTick(prevState),
-                fans: prevState.fans + calculateFansPerTick(prevState),
-                gameProgress: prevState.gameProgress + calculateProgressPerTick(prevState),
-                researchPoints: prevState.researchPoints + calculateResearchPerTick(prevState),
-            }));
+            updateGameState((prevState) => {
+                const newState = {
+                    month: prevState.month % 12 + 1,
+                    year: prevState.month === 12 ? prevState.year + 1 : prevState.year,
+                    money: prevState.money + calculateMoneyPerTick(prevState),
+                    fans: prevState.fans + calculateFansPerTick(prevState),
+                    researchPoints: prevState.researchPoints + calculateResearchPerTick(prevState),
+                };
+
+                // Automatically develop games
+                const updatedGames = prevState.games.map(game => {
+                    if (!game.isReleased) {
+                        const workerContribution = calculateWorkerContribution(game.id, prevState.workers);
+                        const newPoints = game.points + workerContribution + prevState.autoClickPower;
+                        return {
+                            ...game,
+                            points: newPoints,
+                            stage: getGameStage(newPoints)
+                        };
+                    }
+                    return game;
+                });
+
+                return {
+                    ...newState,
+                    games: updatedGames
+                };
+            });
         }, 1000); // Tick every second
 
         return () => clearInterval(gameLoop);
     }, [updateGameState]);
+
+    const calculateWorkerContribution = (gameId, workers) => {
+        const assignedWorkers = workers.filter(worker => worker.assignedTo === gameId);
+        return assignedWorkers.reduce((sum, worker) => {
+            switch(worker.type) {
+                case 'junior': return sum + 1;
+                case 'senior': return sum + 3;
+                case 'expert': return sum + 5;
+                default: return sum;
+            }
+        }, 0);
+    };
+
+    const getGameStage = (points) => {
+        if (points < 250) return 'concept';
+        if (points < 500) return 'pre-production';
+        if (points < 750) return 'production';
+        return 'testing';
+    };
 
     // Helper functions to calculate per-tick updates
     const calculateMoneyPerTick = (state) => {
@@ -194,7 +233,7 @@ export const GameContextProvider = ({ children }) => {
                 money: gameState.money - developer.cost
             });
         } else {
-            customToast('error', 'Not enough money to hire developer.');
+            console.log('error', 'Not enough money to hire developer.');
         }
     };
 
@@ -220,6 +259,14 @@ export const GameContextProvider = ({ children }) => {
         }
     };
 
+    const developGame = (gameId) => {
+        setGames(prevGames => prevGames.map(game => 
+            game.id === gameId 
+                ? { ...game, points: game.points + clickPower } 
+                : game
+        ));
+    };
+
     return (
         <GameContext.Provider value={{
             user,
@@ -235,7 +282,9 @@ export const GameContextProvider = ({ children }) => {
             hireDeveloper,
             hireWorker,
             buyUpgrade,
-            updateGameState
+            updateGameState,
+            calculateWorkerContribution,
+            developGame
         }}>
             {children}
         </GameContext.Provider>

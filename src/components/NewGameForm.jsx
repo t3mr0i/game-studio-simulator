@@ -28,9 +28,13 @@ function NewGameForm() {
     const handleCreateGame = useCallback(() => {
         const newGameName = gameName || generateRandomName();
         const newGenre = selectedGenre || selectRandomGenre();
-        createGame(newGameName, newGenre);
-        setGameName('');
-        setSelectedGenre('');
+        try {
+            createGame(newGameName, newGenre);
+            setGameName('');
+            setSelectedGenre('');
+        } catch (error) {
+            console.error("Error creating game:", error);
+        }
     }, [gameName, selectedGenre, createGame, generateRandomName, selectRandomGenre]);
 
     // Generate a random name and genre when the component mounts
