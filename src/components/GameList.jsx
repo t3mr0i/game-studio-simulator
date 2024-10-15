@@ -7,9 +7,20 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function GameList({ games }) {
-    const { developGame, releaseGame, clickPower, studioName, setGameImportance } = useContext(GameContext);
+    const { 
+        developGame, 
+        releaseGame, 
+        clickPower, 
+        upgradeClickPower,
+        studioName, 
+        setGameImportance, 
+        analyzeGamePerformance, 
+        workers,
+        funds
+    } = useContext(GameContext);
     const [salesData, setSalesData] = useState({});
     const [gamePrices, setGamePrices] = useState({});
+    const [analyzedGames, setAnalyzedGames] = useState({});
 
     const generateRandomStudioName = () => {
         const adjectives = ['Awesome', 'Brilliant', 'Creative', 'Dynamic', 'Eccentric'];
@@ -24,12 +35,15 @@ function GameList({ games }) {
     useEffect(() => {
         const interval = setInterval(() => {
             games.forEach(game => {
-                if (game.isReleased) {
+                if (!game.isReleased) {
+                    developGame(game.id);
+                }
+                if (game.isReleased && game.salesDuration > 0) {
                     setSalesData(prevData => ({
                         ...prevData,
                         [game.id]: [
                             ...(prevData[game.id] || []),
-                            { x: game.soldUnits, y: game.revenue }
+                            { x: 30 - game.salesDuration, y: game.revenue }
                         ]
                     }));
                 }
@@ -37,7 +51,7 @@ function GameList({ games }) {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [games]);
+    }, [games, developGame]);
 
     const getStageColor = (stage) => {
         switch(stage) {
@@ -71,8 +85,26 @@ function GameList({ games }) {
         setGameImportance(gameId, importance);
     };
 
+    const handleAnalyzeGame = (gameId) => {
+        const analysis = analyzeGamePerformance(gameId);
+        setAnalyzedGames(prev => ({...prev, [gameId]: analysis}));
+    };
+
+    const getWorkerContribution = (gameId) => {
+        const assignedWorkers = workers.filter(worker => worker.assignedTo === gameId);
+        return assignedWorkers.reduce((sum, worker) => {
+            switch(worker.type) {
+                case 'junior': return sum + 1;
+                case 'senior': return sum + 3;
+                case 'expert': return sum + 5;
+                default: return sum;
+            }
+        }, 0);
+    };
+
     return (
         <div className="space-y-8">
+       
             {games.map((game) => (
                 <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
                     <h3 className="text-2xl font-bold text-kb-black mb-4">
@@ -91,11 +123,15 @@ function GameList({ games }) {
                                     style={{ width: `${Math.min((game.points / 1000) * 100, 100)}%` }}
                                 ></div>
                             </div>
+                            <p className="text-kb-grey mb-2">
+                                Workers: {workers.filter(w => w.assignedTo === game.id).length} 
+                                (Contribution: +{getWorkerContribution(game.id)} points/s)
+                            </p>
                             <button
                                 className="w-full bg-kb-live-red text-kb-black px-6 py-3 rounded-lg font-bold text-lg mb-4 hover:bg-opacity-90 transition-colors"
                                 onClick={() => developGame(game.id)}
                             >
-                                Develop (+{clickPower})
+                                Develop (+{clickPower + getWorkerContribution(game.id)})
                             </button>
                             <div className="mb-4">
                                 <label htmlFor={`importance-${game.id}`} className="block text-sm font-medium kb-live-red text-kb-grey">
@@ -163,7 +199,7 @@ function GameList({ games }) {
                                                     position: 'bottom',
                                                     title: {
                                                         display: true,
-                                                        text: 'Units Sold'
+                                                        text: 'Days Since Release'
                                                     }
                                                 },
                                                 y: {
@@ -178,6 +214,23 @@ function GameList({ games }) {
                                 </div>
                             ) : (
                                 <p className="text-kb-grey mb-2">Not enough sales data for graph</p>
+                            )}
+                            {!analyzedGames[game.id] ? (
+                                <button
+                                    onClick={() => handleAnalyzeGame(game.id)}
+                                    className="mt-2 bg-kb-grey text-kb-white px-4 py-2 rounded"
+                                >
+                                    Analyze Game Performance
+                                </button>
+                            ) : (
+                                <div className="mt-2 bg-kb-light-grey p-4 rounded">
+                                    <h4 className="font-bold mb-2">Game Analysis</h4>
+                                    <p>Total Sales: {analyzedGames[game.id].totalSales}</p>
+                                    <p>Total Revenue: ${analyzedGames[game.id].totalRevenue.toFixed(2)}</p>
+                                    <p>Average Daily Sales: {analyzedGames[game.id].averageDailySales.toFixed(2)}</p>
+                                    <p>Sales Trend: {analyzedGames[game.id].salesTrend}</p>
+                                    <p>Profit Margin: {analyzedGames[game.id].profitMargin.toFixed(2)}%</p>
+                                </div>
                             )}
                         </>
                     )}

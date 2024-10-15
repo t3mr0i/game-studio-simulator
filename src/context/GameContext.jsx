@@ -280,16 +280,21 @@ export const GameContextProvider = ({ children }) => {
                     }
                 }, 0);
                 
-                const newPoints = game.points + clickPower + workerContribution;
+                const newPoints = game.points + clickPower + autoClickPower + workerContribution;
                 let newStage = game.stage;
                 if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
                 if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
                 if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
+                
+                // Generate research points
+                const newResearchPoints = researchPoints + (Math.random() * workerContribution / 10);
+                setResearchPoints(newResearchPoints);
+                
                 return { ...game, points: newPoints, stage: newStage };
             }
             return game;
         }));
-    }, [clickPower, workers]);
+    }, [clickPower, autoClickPower, workers, researchPoints]);
 
     const hireWorker = useCallback((type) => {
         let cost;
@@ -425,7 +430,9 @@ export const GameContextProvider = ({ children }) => {
             let totalDailyRevenue = 0;
             const updatedGames = gamesRef.current.map(game => {
                 if (game.isReleased && game.salesDuration > 0) {
-                    const dailySales = Math.floor(Math.random() * 1000) + 100;
+                    const baseSales = Math.floor(Math.random() * 100) + 50;
+                    const priceMultiplier = Math.max(0, 1 - (game.price / 100)); // Higher price reduces sales
+                    const dailySales = Math.floor(baseSales * priceMultiplier);
                     const newSoldUnits = game.soldUnits + dailySales;
                     const dailyRevenue = dailySales * game.price;
                     const newRevenue = game.revenue + dailyRevenue;
@@ -618,6 +625,28 @@ export const GameContextProvider = ({ children }) => {
         return () => clearInterval(timeInterval);
     }, [workers]);
 
+    const upgradeClickPower = useCallback(() => {
+        const upgradeCost = Math.floor(100 * Math.pow(1.5, clickPower));
+        if (funds >= upgradeCost) {
+            setFunds(prevFunds => prevFunds - upgradeCost);
+            setClickPower(prevPower => prevPower + 1);
+            customToast.success(`Click power upgraded to ${clickPower + 1}!`);
+        } else {
+            customToast.error('Not enough funds to upgrade click power.');
+        }
+    }, [funds, clickPower]);
+
+    const upgradeAutoClickPower = useCallback(() => {
+        const upgradeCost = Math.floor(200 * Math.pow(1.5, autoClickPower));
+        if (funds >= upgradeCost) {
+            setFunds(prevFunds => prevFunds - upgradeCost);
+            setAutoClickPower(prevPower => prevPower + 1);
+            customToast.success(`Auto-click power upgraded to ${autoClickPower + 1}!`);
+        } else {
+            customToast.error('Not enough funds to upgrade auto-click power.');
+        }
+    }, [funds, autoClickPower]);
+
     return (
         <GameContext.Provider value={{ 
             games, setGames, workers, setWorkers, funds, setFunds, 
@@ -639,6 +668,8 @@ export const GameContextProvider = ({ children }) => {
             analyzeGamePerformance,
             gameTime,
             currentMonth,
+            upgradeClickPower,
+            upgradeAutoClickPower
         }}>
             {children}
         </GameContext.Provider>
