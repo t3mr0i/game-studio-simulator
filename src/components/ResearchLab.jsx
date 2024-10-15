@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
 import { GameContext } from '../context/GameContext';
 import { customToast } from '../utils/toast';
 
@@ -61,6 +61,13 @@ function ResearchLab() {
         setAvailableProjects(filteredProjects.slice(-5));
     }, [currentYear, completedResearch]);
 
+    const completeResearch = useCallback((project) => {
+        setCompletedResearch(prev => [...prev, project.id]);
+        setActiveResearch(null);
+        customToast.success(`Research complete: ${project.name}`);
+        // Implement the effects of completed research here
+    }, [setCompletedResearch]);
+
     useEffect(() => {
         let timer;
         if (activeResearch) {
@@ -73,10 +80,10 @@ function ResearchLab() {
                     }
                     return prev + 1;
                 });
-            }, activeResearch.duration * 10); // Adjust this value to change research speed
+            }, activeResearch.duration * 100); // Adjusted for faster progress
         }
         return () => clearInterval(timer);
-    }, [activeResearch]);
+    }, [activeResearch, completeResearch]);
 
     const startResearch = (project) => {
         if (researchPoints >= project.cost) {
@@ -89,13 +96,6 @@ function ResearchLab() {
         }
     };
 
-    const completeResearch = (project) => {
-        setCompletedResearch(prev => [...prev, project.id]);
-        setActiveResearch(null);
-        customToast.success(`Research complete: ${project.name}`);
-        // Implement the effects of completed research here
-    };
-
     return (
         <div className="bg-kb-black p-4 rounded-lg shadow-md mt-12">
             <h2 className="text-xl font-bold mb-4 text-kb-white">Research Lab</h2>
@@ -105,8 +105,12 @@ function ResearchLab() {
                 <div className="mb-4">
                     <p className="text-kb-white">Researching: {activeResearch.name}</p>
                     <div className="w-full bg-kb-grey rounded-full h-2.5 dark:bg-kb-grey">
-                        <div className="bg-kb-live-red h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                        <div 
+                            className="bg-kb-live-red h-2.5 rounded-full transition-all duration-500 ease-out" 
+                            style={{ width: `${progress}%` }}
+                        ></div>
                     </div>
+                    <p className="text-kb-light-grey text-sm mt-1">{progress.toFixed(0)}% Complete</p>
                 </div>
             )}
             <div className="space-y-4">
