@@ -1,17 +1,14 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
 import { GameContext } from '../context/GameContext';
 
 function TimeControl() {
-    const { startTime, stopTime } = useContext(GameContext);
-    const [isRunning, setIsRunning] = useState(false);
+    const { startTime, stopTime, isTimeRunning } = useContext(GameContext);
 
     const handleToggle = () => {
-        if (isRunning) {
+        if (isTimeRunning) {
             stopTime();
-            setIsRunning(false);
         } else {
             startTime();
-            setIsRunning(true);
         }
     };
 
@@ -21,12 +18,12 @@ function TimeControl() {
             <button
                 onClick={handleToggle}
                 className={`w-full px-4 py-2 rounded font-bold ${
-                    isRunning
+                    isTimeRunning
                         ? 'bg-red-500 text-white hover:bg-red-600'
                         : 'bg-green-500 text-white hover:bg-green-600'
                 }`}
             >
-                {isRunning ? 'Pause Time' : 'Start Time'}
+                {isTimeRunning ? 'Pause Time' : 'Start Time'}
             </button>
         </div>
     );

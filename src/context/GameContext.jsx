@@ -5,7 +5,7 @@ import { ref, set, get, onValue, push, remove } from 'firebase/database';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { customToast } from '../utils/toast';
 import { genres } from '../data/genres';
-import { useTimeManager } from '../utils/TimeManager';
+import { generalEvents, genreSpecificEvents } from '../components/GameEvents';
 
 export const GameContext = createContext();
 
@@ -37,17 +37,13 @@ export const GameContextProvider = ({ children }) => {
     const gamesRef = useRef(games);
     const fundsRef = useRef(funds);
 
+    const [currentYear, setCurrentYear] = useState(1972);
     const [currentMonth, setCurrentMonth] = useState(0);
 
-    const { startTime, stopTime } = useTimeManager();
+    const [isTimeRunning, setIsTimeRunning] = useState(false);
+    const timeIntervalRef = useRef(null);
 
-    useEffect(() => {
-        gamesRef.current = games;
-    }, [games]);
-
-    useEffect(() => {
-        fundsRef.current = funds;
-    }, [funds]);
+    const [currentEvent, setCurrentEvent] = useState(null);
 
     const saveGameState = useCallback(() => {
         if (user && user.uid) {
@@ -66,13 +62,217 @@ export const GameContextProvider = ({ children }) => {
                 completedResearch,
                 marketTrends,
                 events,
-                currentMonth
+                currentYear,
+                currentMonth,
+                gameTime
             };
             set(ref(database, `users/${user.uid}/gameState`), gameState)
                 .then(() => console.log('Game autosaved successfully!'))
                 .catch((error) => console.error('Error autosaving game:', error.message));
         }
-    }, [user, games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, studioName, studioReputation, completedResearch, marketTrends, events, currentMonth]);
+    }, [user, games, workers, funds, totalClicks, clickPower, autoClickPower, gameTime, prestigePoints, researchPoints, studioName, studioReputation, completedResearch, marketTrends, events, currentYear, currentMonth]);
+
+    const payWorkerSalaries = useCallback(() => {
+        const totalSalary = workers.reduce((sum, worker) => {
+            switch(worker.type) {
+                case 'junior': return sum + 1000;
+                case 'senior': return sum + 5000;
+                case 'expert': return sum + 10000;
+                default: return sum;
+            }
+        }, 0);
+
+        setFunds(prevFunds => {
+            const newFunds = prevFunds - totalSalary;
+            if (newFunds < 0) {
+                customToast.error(`You're in debt! Current balance: $${newFunds}`);
+            } else {
+                customToast.info(`Paid $${totalSalary} in salaries. Current balance: $${newFunds}`);
+            }
+            return newFunds;
+        });
+    }, [workers]);
+
+    const updateMarketTrends = useCallback(() => {
+        const newTrends = {};
+        genres.forEach(genre => {
+            newTrends[genre.id] = Math.random() * 2 - 1; // Range from -1 to 1
+        });
+        setMarketTrends(newTrends);
+    }, []);
+
+    const updateStudioReputation = useCallback(() => {
+        // Logic to update studio reputation based on game performance, etc.
+    }, []);
+
+    const progressGames = useCallback(() => {
+        setGames(prevGames => prevGames.map(game => {
+            if (!game.isReleased) {
+                const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
+                const workerContribution = assignedWorkers.reduce((sum, worker) => {
+                    switch(worker.type) {
+                        case 'junior': return sum + 1;
+                        case 'senior': return sum + 3;
+                        case 'expert': return sum + 5;
+                        default: return sum;
+                    }
+                }, 0);
+                
+                const newPoints = game.points + workerContribution + autoClickPower;
+                let newStage = game.stage;
+                if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
+                if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
+                if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
+                
+                return { ...game, points: newPoints, stage: newStage };
+            }
+            return game;
+        }));
+    }, [workers, autoClickPower]);
+
+    const generateResearchPoints = useCallback(() => {
+        const totalWorkerContribution = workers.reduce((sum, worker) => {
+            switch(worker.type) {
+                case 'junior': return sum + 0.1;
+                case 'senior': return sum + 0.3;
+                case 'expert': return sum + 0.5;
+                default: return sum;
+            }
+        }, 0);
+        setResearchPoints(prevPoints => prevPoints + totalWorkerContribution);
+    }, [workers]);
+
+    const handleEffect = useCallback((effect) => {
+        switch (effect.type) {
+            case 'UPDATE_GAME':
+                setGames(prevGames => prevGames.map(game => 
+                    game.id === effect.game.id ? effect.game : game
+                ));
+                break;
+            case 'ADD_FUNDS':
+                setFunds(prevFunds => prevFunds + effect.amount);
+                break;
+            case 'SUBTRACT_FUNDS':
+                setFunds(prevFunds => prevFunds - effect.amount);
+                break;
+            case 'START_NEW_GAME':
+                if (funds >= 100) {
+                    setFunds(prevFunds => prevFunds - 100);
+                    const newGame = {
+                        id: games.length,
+                        name: `New ${effect.genre} Game`,
+                        genre: effect.genre,
+                        genreId: effect.genreId,
+                        points: 0,
+                        stage: 'concept',
+                        isReleased: false,
+                        rating: 0,
+                        revenue: 0,
+                        popularity: 10,
+                    };
+                    setGames(prevGames => [...prevGames, newGame]);
+                }
+                break;
+            case 'NO_EFFECT':
+                // Do nothing
+                break;
+            default:
+                console.error('Unknown effect type:', effect.type);
+        }
+    }, [games, funds]);
+
+    const handleEventChoice = useCallback((choice) => {
+        const affectedGame = games[Math.floor(Math.random() * games.length)];
+        const effect = choice.effect(affectedGame);
+
+        if (Array.isArray(effect)) {
+            effect.forEach(handleEffect);
+        } else {
+            handleEffect(effect);
+        }
+
+        setCurrentEvent(null);
+    }, [games, handleEffect]);
+
+    const checkForRandomEvent = useCallback(() => {
+        if (!currentEvent && Math.random() < 0.1) { // 10% chance of event every day
+            const allEvents = [...generalEvents, ...genreSpecificEvents];
+            setCurrentEvent(allEvents[Math.floor(Math.random() * allEvents.length)]);
+        }
+    }, [currentEvent]);
+
+    const advanceTime = useCallback(() => {
+        setGameTime(prevTime => {
+            const newTime = prevTime + 1;
+            const newMonth = Math.floor(newTime / 30) % 12;
+            const newYear = Math.floor(newTime / 360) + 1972;
+
+            if (newMonth !== currentMonth) {
+                setCurrentMonth(newMonth);
+                // Monthly events
+                payWorkerSalaries();
+                updateMarketTrends();
+                saveGameState();
+            }
+
+            if (newYear !== currentYear) {
+                setCurrentYear(newYear);
+                // Yearly events
+                updateStudioReputation();
+            }
+
+            // Daily events
+            progressGames();
+            generateResearchPoints();
+            checkForRandomEvent();
+
+            return newTime;
+        });
+    }, [currentMonth, currentYear, payWorkerSalaries, updateMarketTrends, saveGameState, updateStudioReputation, progressGames, generateResearchPoints, checkForRandomEvent]);
+
+    const startTime = useCallback(() => {
+        if (timeIntervalRef.current) return;
+
+        timeIntervalRef.current = setInterval(() => {
+            advanceTime();
+        }, 1000); // 1 second represents 1 day in game time
+
+        setIsTimeRunning(true);
+    }, [advanceTime]);
+
+    const stopTime = useCallback(() => {
+        if (timeIntervalRef.current) {
+            clearInterval(timeIntervalRef.current);
+            timeIntervalRef.current = null;
+            setIsTimeRunning(false);
+        }
+    }, []);
+
+    // Start the timer automatically when the component mounts
+    useEffect(() => {
+        startTime();
+        return () => {
+            if (timeIntervalRef.current) {
+                clearInterval(timeIntervalRef.current);
+            }
+        };
+    }, [startTime]);
+
+    useEffect(() => {
+        return () => {
+            if (timeIntervalRef.current) {
+                clearInterval(timeIntervalRef.current);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        gamesRef.current = games;
+    }, [games]);
+
+    useEffect(() => {
+        fundsRef.current = funds;
+    }, [funds]);
 
     // Autosave every 5 minutes
     useEffect(() => {
@@ -133,7 +333,9 @@ export const GameContextProvider = ({ children }) => {
                 setCompletedResearch(gameState.completedResearch || []);
                 setMarketTrends(gameState.marketTrends || {});
                 setEvents(gameState.events || []);
+                setCurrentYear(gameState.currentYear || 1972);
                 setCurrentMonth(gameState.currentMonth || 0);
+                setGameTime(gameState.gameTime || 0);
                 customToast.success('Game state loaded successfully!');
             } else {
                 customToast.info('No saved game state found. Starting a new game.');
@@ -248,28 +450,6 @@ export const GameContextProvider = ({ children }) => {
         }
     }, [funds, games.length, saveGameState]);
 
-    const updateMarketTrends = useCallback(() => {
-        const newTrends = {};
-        genres.forEach(genre => {
-            newTrends[genre.id] = Math.random() * 2 - 1; // Range from -1 to 1
-        });
-        setMarketTrends(newTrends);
-    }, []);
-
-    const generateEvent = useCallback(() => {
-        // Logic to generate random events
-    }, []);
-
-    useEffect(() => {
-        const marketInterval = setInterval(updateMarketTrends, 30000); // Update every 30 seconds
-        const eventInterval = setInterval(generateEvent, 60000); // Generate event every minute
-
-        return () => {
-            clearInterval(marketInterval);
-            clearInterval(eventInterval);
-        };
-    }, [updateMarketTrends, generateEvent]);
-
     const developGame = useCallback((gameId) => {
         setGames(prevGames => prevGames.map(game => {
             if (game.id === gameId) {
@@ -325,37 +505,43 @@ export const GameContextProvider = ({ children }) => {
         return () => clearInterval(developmentInterval);
     }, [workers, autoClickPower]);
 
-    // Modify this effect to handle worker contributions and auto-click power
+    // Modify this effect to prevent infinite updates
     useEffect(() => {
         const gameInterval = setInterval(() => {
-            setGames(prevGames => prevGames.map(game => {
-                if (!game.isReleased) {
-                    const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
-                    const workerContribution = assignedWorkers.reduce((sum, worker) => {
-                        switch(worker.type) {
-                            case 'junior': return sum + 1;
-                            case 'senior': return sum + 3;
-                            case 'expert': return sum + 5;
-                            default: return sum;
+            setGames(prevGames => {
+                let updated = false;
+                const newGames = prevGames.map(game => {
+                    if (!game.isReleased) {
+                        const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
+                        const workerContribution = assignedWorkers.reduce((sum, worker) => {
+                            switch(worker.type) {
+                                case 'junior': return sum + 1;
+                                case 'senior': return sum + 3;
+                                case 'expert': return sum + 5;
+                                default: return sum;
+                            }
+                        }, 0);
+                        
+                        const newPoints = game.points + workerContribution + autoClickPower;
+                        let newStage = game.stage;
+                        if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
+                        if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
+                        if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
+                        
+                        if (newPoints !== game.points || newStage !== game.stage) {
+                            updated = true;
+                            return { ...game, points: newPoints, stage: newStage };
                         }
-                    }, 0);
-                    
-                    const newPoints = game.points + workerContribution + autoClickPower;
-                    let newStage = game.stage;
-                    if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
-                    if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
-                    if (newPoints >= 750 && newStage === 'production') newStage = 'testing';
-                    
-                    return { ...game, points: newPoints, stage: newStage };
+                    }
+                    return game;
+                });
+
+                if (updated) {
+                    return newGames;
                 }
-                return game;
-            }));
+                return prevGames;
+            });
 
-            // Update game time and current month
-            setGameTime(prevTime => prevTime + 1);
-            setCurrentMonth(prevMonth => (prevMonth + 1) % 12);
-
-            // Generate research points
             setResearchPoints(prevPoints => {
                 const totalWorkerContribution = workers.reduce((sum, worker) => {
                     switch(worker.type) {
@@ -368,7 +554,7 @@ export const GameContextProvider = ({ children }) => {
                 return prevPoints + totalWorkerContribution;
             });
 
-        }, 1000); // Update every second
+        }, 1000);
 
         return () => clearInterval(gameInterval);
     }, [workers, autoClickPower]);
@@ -690,11 +876,15 @@ export const GameContextProvider = ({ children }) => {
             loadSavedGames,
             analyzeGamePerformance,
             gameTime,
+            currentYear,
             currentMonth,
             upgradeClickPower,
             upgradeAutoClickPower,
             startTime,
-            stopTime
+            stopTime,
+            isTimeRunning,
+            currentEvent,
+            handleEventChoice
         }}>
             {children}
         </GameContext.Provider>

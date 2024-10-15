@@ -31,18 +31,14 @@ const gameHistory = [
 ];
 
 function YearCounter() {
-    const { gameTime, currentMonth } = useContext(GameContext);
-    const [currentYear, setCurrentYear] = useState(1972);
+    const { currentYear, currentMonth } = useContext(GameContext);
     const [yearProgress, setYearProgress] = useState(0);
     const [tickerPosition, setTickerPosition] = useState(0);
     const tickerRef = useRef(null);
 
     useEffect(() => {
-        const year = Math.floor(gameTime / 360) + 1972;
-        const progress = currentMonth / 12;
-        setCurrentYear(year);
-        setYearProgress(progress);
-    }, [gameTime, currentMonth]);
+        setYearProgress(currentMonth / 12);
+    }, [currentMonth]);
 
     const currentYearEvents = useMemo(() => {
         const events = gameHistory.filter(event => {
