@@ -5,6 +5,7 @@ import { ref, set, get, onValue, push, remove } from 'firebase/database';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { customToast } from '../utils/toast';
 import { genres } from '../data/genres';
+import { useTimeManager } from '../utils/TimeManager';
 
 export const GameContext = createContext();
 
@@ -37,6 +38,8 @@ export const GameContextProvider = ({ children }) => {
     const fundsRef = useRef(funds);
 
     const [currentMonth, setCurrentMonth] = useState(0);
+
+    const { startTime, stopTime } = useTimeManager();
 
     useEffect(() => {
         gamesRef.current = games;
@@ -280,7 +283,7 @@ export const GameContextProvider = ({ children }) => {
                     }
                 }, 0);
                 
-                const newPoints = game.points + clickPower + workerContribution;
+                const newPoints = game.points + clickPower;
                 let newStage = game.stage;
                 if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
                 if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
@@ -292,7 +295,7 @@ export const GameContextProvider = ({ children }) => {
         }));
     }, [clickPower, workers]);
 
-    // Add this effect to handle automatic game development by workers
+    // Effect to handle automatic game development by workers
     useEffect(() => {
         const developmentInterval = setInterval(() => {
             setGames(prevGames => prevGames.map(game => {
@@ -300,14 +303,14 @@ export const GameContextProvider = ({ children }) => {
                     const assignedWorkers = workers.filter(worker => worker.assignedTo === game.id);
                     const workerContribution = assignedWorkers.reduce((sum, worker) => {
                         switch(worker.type) {
-                            case 'junior': return sum + 0.1;
-                            case 'senior': return sum + 0.3;
-                            case 'expert': return sum + 0.5;
+                            case 'junior': return sum + 1;
+                            case 'senior': return sum + 3;
+                            case 'expert': return sum + 5;
                             default: return sum;
                         }
                     }, 0);
                     
-                    const newPoints = game.points + workerContribution;
+                    const newPoints = game.points + workerContribution + autoClickPower;
                     let newStage = game.stage;
                     if (newPoints >= 250 && newStage === 'concept') newStage = 'pre-production';
                     if (newPoints >= 500 && newStage === 'pre-production') newStage = 'production';
@@ -320,7 +323,7 @@ export const GameContextProvider = ({ children }) => {
         }, 1000); // Update every second
 
         return () => clearInterval(developmentInterval);
-    }, [workers]);
+    }, [workers, autoClickPower]);
 
     // Modify this effect to handle worker contributions and auto-click power
     useEffect(() => {
@@ -645,42 +648,6 @@ export const GameContextProvider = ({ children }) => {
         return () => unsubscribe();
     }, [loadSavedGames]);
 
-    // Add this effect to handle time progression and salary payments
-    useEffect(() => {
-        const timeInterval = setInterval(() => {
-            setGameTime(prevTime => prevTime + 1);
-            setCurrentMonth(prevMonth => {
-                const newMonth = (prevMonth + 1) % 12;
-                
-                // Pay salaries at the start of each month
-                if (newMonth === 0) {
-                    const totalSalary = workers.reduce((sum, worker) => {
-                        switch(worker.type) {
-                            case 'junior': return sum + 1000;
-                            case 'senior': return sum + 5000;
-                            case 'expert': return sum + 10000;
-                            default: return sum;
-                        }
-                    }, 0);
-
-                    setFunds(prevFunds => {
-                        const newFunds = prevFunds - totalSalary;
-                        if (newFunds < 0) {
-                            customToast.error(`You're in debt! Current balance: $${newFunds}`);
-                        } else {
-                            customToast.info(`Paid $${totalSalary} in salaries. Current balance: $${newFunds}`);
-                        }
-                        return newFunds;
-                    });
-                }
-                
-                return newMonth;
-            });
-        }, 1000); // 1 second represents 1 day in game time
-
-        return () => clearInterval(timeInterval);
-    }, [workers]);
-
     const upgradeClickPower = useCallback(() => {
         const upgradeCost = Math.floor(100 * Math.pow(1.5, clickPower));
         if (funds >= upgradeCost) {
@@ -713,7 +680,7 @@ export const GameContextProvider = ({ children }) => {
             studioReputation, setStudioReputation, completedResearch, setCompletedResearch,
             user, isOnline, isOnlineMode, toggleOnlineMode,
             manualSync, resolveConflict, conflicts,
-            createGame, developGame, releaseGame,
+            createGame, developGame, releaseGame, // Make sure releaseGame is included here
             hireWorker, setGameImportance,
             signInWithGoogle, loadGameState, saveGameState,
             savedGames,
@@ -725,7 +692,9 @@ export const GameContextProvider = ({ children }) => {
             gameTime,
             currentMonth,
             upgradeClickPower,
-            upgradeAutoClickPower
+            upgradeAutoClickPower,
+            startTime,
+            stopTime
         }}>
             {children}
         </GameContext.Provider>

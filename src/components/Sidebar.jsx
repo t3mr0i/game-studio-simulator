@@ -5,6 +5,7 @@ import DeveloperHiring from './DeveloperHiring';
 import Upgrades from './Upgrades';
 import ResearchLab from './ResearchLab';
 import SaveGameManager from './SaveGameManager';
+import TimeControl from './TimeControl';
 
 function Sidebar({ isOpen, setIsOpen }) {
     return (
@@ -21,6 +22,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                 } transform lg:translate-x-0 lg:static fixed inset-y-0 left-0 z-50 w-64 bg-kb-black text-kb-white overflow-y-auto transition duration-300 ease-in-out lg:translate-x-0`}
             >
                 <div className="p-4 space-y-6">
+                    <TimeControl />
                     <StudioManagement />
                     <NewGameForm />
                     <DeveloperHiring />

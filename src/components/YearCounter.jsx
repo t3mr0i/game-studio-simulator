@@ -106,7 +106,10 @@ function YearCounter() {
                 <div className="mr-1 text-2xl font-bold min-w-[70px] relative">
                     {currentYear}
                     <div className="absolute bottom-0 left-0 right-0 bg-gray-700 h-1">
-                        <div style={progressBarStyle}></div>
+                        <div 
+                            className="bg-white h-full" 
+                            style={{ width: `${yearProgress * 100}%` }}
+                        ></div>
                     </div>
                 </div>
                 <div className="flex-1 overflow-hidden" style={gradientMaskStyle}>
