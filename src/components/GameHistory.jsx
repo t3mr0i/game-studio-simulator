@@ -42,7 +42,7 @@ function GameHistory({ games }) {
     };
 
     if (!games || games.length === 0) {
-        return <div className="text-kb-white">No historical games available.</div>;
+        return <div className="text-kb-black">No historical games available.</div>;
     }
 
     return (
@@ -56,11 +56,11 @@ function GameHistory({ games }) {
                         <div className="space-y-2">
                             <p className="text-kb-grey"><span className="font-semibold">Genre:</span> {game.genre}</p>
                             <p className="text-kb-grey"><span className="font-semibold">Price:</span> ${game.price}</p>
-                            <p className="text-kb-grey"><span className="font-semibold">Revenue:</span> ${game.revenue.toFixed(2)}</p>
+                            <p className="text-kb-grey"><span className="font-semibold">Revenue:</span> ${game.revenue?.toFixed(2) || '0.00'}</p>
                             <p className={`font-bold ${getMetacriticColor(game.metacriticScore)}`}>
-                                Metacritic Score: {game.metacriticScore}
+                                Metacritic Score: {game.metacriticScore || 'N/A'}
                             </p>
-                            <p className="text-kb-grey"><span className="font-semibold">Total Units Sold:</span> {game.soldUnits.toLocaleString()}</p>
+                            <p className="text-kb-grey"><span className="font-semibold">Total Units Sold:</span> {game.soldUnits?.toLocaleString() || '0'}</p>
                             <p className={`font-semibold ${game.isActive ? 'text-green-500' : 'text-red-500'}`}>
                                 {game.isActive ? 'Actively Selling' : 'No Longer on Shelves'}
                             </p>
@@ -73,22 +73,11 @@ function GameHistory({ games }) {
                             {analysisResults[game.id] && (
                                 <div className="mt-4">
                                     <h4 className="font-bold">Analysis Results:</h4>
-                                    <div className="text-green-500">
-                                        <h5 className="font-semibold">Pros:</h5>
-                                        <ul className="list-disc list-inside">
-                                            {analysisResults[game.id].pros.map((pro, index) => (
-                                                <li key={index}>{pro}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="text-red-500">
-                                        <h5 className="font-semibold">Cons:</h5>
-                                        <ul className="list-disc list-inside">
-                                            {analysisResults[game.id].cons.map((con, index) => (
-                                                <li key={index}>{con}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                                    <p>Total Sales: {analysisResults[game.id].totalSales}</p>
+                                    <p>Total Revenue: ${analysisResults[game.id].totalRevenue.toFixed(2)}</p>
+                                    <p>Average Daily Sales: {analysisResults[game.id].averageDailySales.toFixed(2)}</p>
+                                    <p>Sales Trend: {analysisResults[game.id].salesTrend}</p>
+                                    <p>Profit Margin: {analysisResults[game.id].profitMargin.toFixed(2)}%</p>
                                 </div>
                             )}
                         </div>
