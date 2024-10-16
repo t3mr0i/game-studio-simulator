@@ -32,7 +32,10 @@ function GameList({ games }) {
 
     const displayStudioName = studioName || generateRandomStudioName();
 
-    const workers = gameState.workers || [];
+    const workers = gameState?.workers || [];
+    const games = gameState?.games || [];
+
+    const activeGames = games.filter(game => !game.isReleased);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -94,7 +97,7 @@ function GameList({ games }) {
             {games.map((game) => (
                 <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
                     <h3 className="text-2xl font-bold text-kb-black mb-4">
-                        {game.name} <span className="text-sm text-kb-grey">by {displayStudioName}</span>
+                        {game.name}{studioName && <span className="text-sm text-kb-grey"> by {studioName}</span>}
                     </h3>
                     <p className="text-kb-grey mb-2">Genre: {game.genre}</p>
                     <p className="text-kb-grey mb-4">Points: {game.points?.toFixed(0) ?? '0'}</p>

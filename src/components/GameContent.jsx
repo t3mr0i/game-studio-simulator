@@ -7,12 +7,12 @@ import NewsTicker from './NewsTicker';
 import Sidebar from './Sidebar';
 
 function GameContent() {
-  const { gameState, saveGameState, loadGameState, games } = useContext(GameContext);
+  const { gameState } = useContext(GameContext);
   const [activeTab, setActiveTab] = useState('active');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const activeGames = games?.filter(game => !game.isReleased) || [];
-  const historicalGames = games?.filter(game => game.isReleased) || [];
+  const activeGames = gameState?.games?.filter(game => !game.isReleased) || [];
+  const historicalGames = gameState?.games?.filter(game => game.isReleased) || [];
 
   useEffect(() => {
     const handleResize = () => {

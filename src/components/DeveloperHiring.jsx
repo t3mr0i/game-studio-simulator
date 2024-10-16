@@ -10,6 +10,12 @@ function DeveloperHiring() {
             case 'junior': return 1000;
             case 'senior': return 5000;
             case 'expert': return 10000;
+            case 'manager': return 20000;
+            case 'director': return 50000;
+            case 'executive': return 100000;
+            case 'ceo': return 200000;
+            case 'founder': return 500000;
+            
             default: return 0;
         }
     };

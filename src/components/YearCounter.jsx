@@ -31,28 +31,25 @@ const gameHistory = [
 ];
 
 function YearCounter() {
-    const { gameTime } = useContext(GameContext);
-    const [currentYear, setCurrentYear] = useState(1972);
+    const { gameTime, gameState } = useContext(GameContext);
     const [yearProgress, setYearProgress] = useState(0);
     const [tickerPosition, setTickerPosition] = useState(0);
     const tickerRef = useRef(null);
 
     useEffect(() => {
-        const totalMonths = Number(gameTime);
-        const year = Math.floor(totalMonths / 12) + 1972;
-        const progress = (totalMonths % 12) / 12;
-        setCurrentYear(year);
+        const year = Math.floor(gameTime / 12) + 1972;
+        const progress = (gameTime % 12) / 12;
         setYearProgress(progress);
     }, [gameTime]);
 
     const currentYearEvents = useMemo(() => {
         const events = gameHistory.filter(event => {
             const eventYear = parseInt(event.split(' ')[0]);
-            return eventYear === currentYear;
+            return eventYear === gameState.year;
         });
         // If no events for the current year, use all events
         return events.length > 0 ? events : gameHistory;
-    }, [currentYear]);
+    }, [gameState.year]);
 
     useEffect(() => {
         const ticker = tickerRef.current;
@@ -105,7 +102,7 @@ function YearCounter() {
         <div className="bg-kb-black text-white p-2">
             <div className="flex items-center">
                 <div className="mr-1 text-2xl font-bold min-w-[70px] relative">
-                    {isNaN(currentYear) ? 1972 : currentYear}
+                    {gameState.year}
                     <div className="absolute bottom-0 left-0 right-0 bg-gray-700 h-1">
                         <div style={progressBarStyle}></div>
                     </div>
