@@ -100,7 +100,7 @@ function GameList() {
     return (
         <div className="space-y-8">
             {activeGames.map((game) => (
-                <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
+                <div key={game.id || Math.random().toString(36).substr(2, 9)} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
                     <h3 className="text-2xl font-bold text-kb-black mb-4">
                         {game.name}{studioName && <span className="text-sm text-kb-grey"> by {studioName}</span>}
                     </h3>

@@ -93,39 +93,7 @@ export const GameContextProvider = ({ children }) => {
         }));
     }, []);
 
-    useEffect(() => {
-        const gameLoop = setInterval(() => {
-            setGameTime(prevTime => prevTime + 0.1);
-            updateGameState((prevState) => {
-                const newMonth = prevState.month % 12 + 1;
-                const newYear = newMonth === 1 ? prevState.year + 1 : prevState.year;
-                return {
-                    ...prevState,
-                    month: newMonth,
-                    year: newYear,
-                    money: prevState.money + calculateMoneyPerTick(prevState),
-                    fans: prevState.fans + calculateFansPerTick(prevState),
-                    researchPoints: prevState.researchPoints + calculateResearchPerTick(prevState),
-                    games: prevState.games.map(game => {
-                        if (!game.isReleased) {
-                            const workerContribution = calculateWorkerContribution(game.id, prevState.workers);
-                            const newPoints = game.points + workerContribution + prevState.autoClickPower;
-                            return {
-                                ...game,
-                                points: newPoints,
-                                stage: getGameStage(newPoints)
-                            };
-                        }
-                        return game;
-                    })
-                };
-            });
-        }, 1000); // Tick every second
-
-        return () => clearInterval(gameLoop);
-    }, []);
-
-    const calculateWorkerContribution = (gameId, workers) => {
+    const calculateWorkerContribution = useCallback((gameId, workers) => {
         const assignedWorkers = workers.filter(worker => worker.assignedTo === gameId);
         return assignedWorkers.reduce((sum, worker) => {
             switch(worker.type) {
@@ -140,7 +108,42 @@ export const GameContextProvider = ({ children }) => {
                 default: return sum;
             }
         }, 0);
-    };
+    }, []);
+
+    useEffect(() => {
+        const gameLoop = setInterval(() => {
+            setGameTime(prevTime => prevTime + 0.1);
+            setGameState((prevState) => {
+                const newMonth = prevState.month % 12 + 1;
+                const newYear = newMonth === 1 ? prevState.year + 1 : prevState.year;
+                
+                const updatedGames = prevState.games.map(game => {
+                    if (!game.isReleased) {
+                        const workerContribution = calculateWorkerContribution(game.id, prevState.workers);
+                        const newPoints = game.points + workerContribution + prevState.autoClickPower;
+                        return {
+                            ...game,
+                            points: newPoints,
+                            stage: getGameStage(newPoints)
+                        };
+                    }
+                    return game;
+                });
+
+                return {
+                    ...prevState,
+                    month: newMonth,
+                    year: newYear,
+                    money: prevState.money + calculateMoneyPerTick(prevState),
+                    fans: prevState.fans + calculateFansPerTick(prevState),
+                    researchPoints: prevState.researchPoints + calculateResearchPerTick(prevState),
+                    games: updatedGames
+                };
+            });
+        }, 1000); // Tick every second
+
+        return () => clearInterval(gameLoop);
+    }, [calculateWorkerContribution]);
 
     const getGameStage = (points) => {
         if (points < 250) return 'concept';
@@ -194,6 +197,7 @@ export const GameContextProvider = ({ children }) => {
         if (!user) return;
 
         const newGame = {
+            id: Date.now().toString(), // Use timestamp as a unique id
             name: gameName,
             genre: genre,
             year: gameState.year,
@@ -244,10 +248,10 @@ export const GameContextProvider = ({ children }) => {
             if (currentGame && currentGame.id === gameId) {
                 setCurrentGame(null);
             }
-            customToast('success', 'Game deleted successfully!');
+            console.log('Game deleted successfully!');
         } catch (error) {
             console.error("Error deleting game", error);
-            customToast('error', 'Failed to delete game.');
+            console.log('Failed to delete game.');
         }
     };
 
@@ -279,10 +283,10 @@ export const GameContextProvider = ({ children }) => {
                 return acc;
             }, {}));
 
-            customToast.success('Game saved successfully!');
+            console.log('Game saved successfully!');
         } catch (error) {
             console.error("Error saving game", error);
-            customToast.error('Failed to save game.');
+            console.log('Failed to save game.');
         }
     };
 
@@ -331,7 +335,7 @@ export const GameContextProvider = ({ children }) => {
                 money: gameState.money - upgrade.cost
             });
         } else {
-            customToast('error', 'Not enough money to buy upgrade.');
+            console.log('error', 'Not enough money to buy upgrade.');
         }
     };
 
