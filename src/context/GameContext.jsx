@@ -406,6 +406,18 @@ export const GameContextProvider = ({ children }) => {
         }));
     };
 
+    const releaseGame = (gameId, price) => {
+        setGameState(prevState => ({
+            ...prevState,
+            games: prevState.games.map(game => 
+                game.id === gameId 
+                    ? { ...game, isReleased: true, price: price, salesDuration: 30 } // 30 days of sales
+                    : game
+            )
+        }));
+        console.log(`Game ${gameId} released at price $${price}`);
+    };
+
     return (
         <GameContext.Provider value={{
             user,
@@ -432,6 +444,7 @@ export const GameContextProvider = ({ children }) => {
             studioReputation,
             setStudioReputation,
             setGameImportance,
+            releaseGame,
         }}>
             {children}
         </GameContext.Provider>

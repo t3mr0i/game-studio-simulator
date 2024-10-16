@@ -2,11 +2,10 @@ import React, { useContext } from 'react';
 import { GameContext } from '../context/GameContext';
 
 function Upgrades() {
-    const { gameState, upgradeClickPower, upgradeAutoClickPower } = useContext(GameContext);
-    const { clickPower, autoClickPower, money } = gameState;
+    const { gameState, upgradeClickPower } = useContext(GameContext);
+    const { clickPower, money } = gameState;
 
     const clickUpgradeCost = Math.floor(100 * Math.pow(1.5, clickPower));
-    const autoClickUpgradeCost = Math.floor(200 * Math.pow(1.5, autoClickPower));
 
     return (
         <div className="bg-kb-white p-4 rounded-lg shadow-md">
@@ -20,16 +19,6 @@ function Upgrades() {
                         disabled={money < clickUpgradeCost}
                     >
                         Upgrade Click Power (${clickUpgradeCost})
-                    </button>
-                </div>
-                <div className="upgrade-item">
-                    <p className="text-kb-black">Auto Click Power: {autoClickPower}</p>
-                    <button 
-                        className="w-full bg-kb-live-red text-kb-black px-4 py-2 rounded hover:bg-opacity-90 transition-colors disabled:bg-kb-grey disabled:cursor-not-allowed" 
-                        onClick={upgradeAutoClickPower}
-                        disabled={money < autoClickUpgradeCost}
-                    >
-                        Upgrade Auto Click Power (${autoClickUpgradeCost})
                     </button>
                 </div>
             </div>

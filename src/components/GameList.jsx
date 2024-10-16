@@ -10,7 +10,6 @@ function GameList() {
     const { 
         releaseGame, 
         clickPower, 
-        autoClickPower,
         studioName, 
         setGameImportance, 
         analyzeGamePerformance,
@@ -118,12 +117,6 @@ function GameList() {
                     <p className="text-kb-grey mb-2">
                         Workers: {workers.filter(w => w.assignedTo === game.id).length} 
                         (Contribution: +{calculateWorkerContribution(game.id, workers)} points/s)
-                    </p>
-                    <p className="text-kb-grey mb-2">
-                        Auto-Click Power: +{autoClickPower} points/s
-                    </p>
-                    <p className="text-kb-grey mb-2">
-                        Total points per second: {calculateWorkerContribution(game.id, workers) + autoClickPower}
                     </p>
                     <button
                         className="w-full bg-kb-live-red text-kb-black px-6 py-3 rounded-lg font-bold text-lg mb-4 hover:bg-opacity-90 transition-colors"
