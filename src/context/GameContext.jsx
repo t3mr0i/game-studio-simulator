@@ -390,7 +390,7 @@ export const GameContextProvider = ({ children }) => {
         }, 60000); // Save every minute
 
         return () => clearInterval(saveInterval);
-    }, [user, gameState]);
+    }, [user, gameState, saveGame]);
 
     // Add this function to the GameContext
     const setGameImportance = (gameId, importance) => {
