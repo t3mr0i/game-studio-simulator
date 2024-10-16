@@ -47,8 +47,8 @@ function YearCounter() {
             const eventYear = parseInt(event.split(' ')[0]);
             return eventYear === gameState.year;
         });
-        // If no events for the current year, use all events
-        return events.length > 0 ? events : gameHistory;
+        // If no events for the current year, return an array with a single "No notable events" message
+        return events.length > 0 ? events : [`${gameState.year} - No notable events in the gaming industry this year.`];
     }, [gameState.year]);
 
     useEffect(() => {

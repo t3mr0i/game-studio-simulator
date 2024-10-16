@@ -1,7 +1,7 @@
 // src/context/GameContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { auth, database } from '../firebase';
-import { ref, set, get, onValue, push, remove } from 'firebase/database';
+import { ref, set, get, onValue, push, remove, update } from 'firebase/database';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { genres } from '../data/genres';
 import { generalEvents, genreSpecificEvents } from '../components/GameEvents';
@@ -197,7 +197,7 @@ export const GameContextProvider = ({ children }) => {
         if (!user) return;
 
         const newGame = {
-            id: Date.now().toString(), // Use timestamp as a unique id
+            id: Date.now().toString(),
             name: gameName,
             genre: genre,
             year: gameState.year,
@@ -206,6 +206,7 @@ export const GameContextProvider = ({ children }) => {
             stage: 'concept',
             isReleased: false,
             importance: 5,
+            price: 40, // Default price of 40 euros
         };
 
         try {
@@ -274,20 +275,87 @@ export const GameContextProvider = ({ children }) => {
                 name: gameState.name,
                 newsItems: gameState.newsItems,
                 clickPower: gameState.clickPower,
-                autoClickPower: gameState.autoClickPower,
+                studioName: studioName,
+                studioReputation: studioReputation,
             });
 
             const gamesRef = ref(database, `users/${user.uid}/games`);
-            await set(gamesRef, gameState.games.reduce((acc, game) => {
+            const gamesObject = gameState.games.reduce((acc, game) => {
                 acc[game.id] = game;
                 return acc;
-            }, {}));
+            }, {});
+            await set(gamesRef, gamesObject);
 
             console.log('Game saved successfully!');
         } catch (error) {
             console.error("Error saving game", error);
             console.log('Failed to save game.');
         }
+    };
+
+    const loadGame = async () => {
+        if (!user) return;
+
+        try {
+            const gameStateRef = ref(database, `users/${user.uid}/gameState`);
+            const gameStateSnapshot = await get(gameStateRef);
+            
+            if (gameStateSnapshot.exists()) {
+                const loadedGameState = gameStateSnapshot.val();
+                setGameState(prevState => ({
+                    ...prevState,
+                    ...loadedGameState
+                }));
+                setStudioName(loadedGameState.studioName || "");
+                setStudioReputation(loadedGameState.studioReputation || 0);
+            }
+
+            const gamesRef = ref(database, `users/${user.uid}/games`);
+            const gamesSnapshot = await get(gamesRef);
+
+            if (gamesSnapshot.exists()) {
+                const loadedGames = Object.values(gamesSnapshot.val());
+                setGameState(prevState => ({
+                    ...prevState,
+                    games: loadedGames
+                }));
+            }
+
+            console.log('Game loaded successfully!');
+        } catch (error) {
+            console.error("Error loading game", error);
+            console.log('Failed to load game.');
+        }
+    };
+
+    const saveIndividualGame = async (gameId) => {
+        if (!user) return;
+
+        try {
+            const game = gameState.games.find(g => g.id === gameId);
+            if (!game) {
+                console.error("Game not found");
+                return;
+            }
+
+            const gameRef = ref(database, `users/${user.uid}/games/${gameId}`);
+            await set(gameRef, game);
+
+            console.log(`Game ${gameId} saved successfully!`);
+        } catch (error) {
+            console.error(`Error saving game ${gameId}`, error);
+            console.log(`Failed to save game ${gameId}.`);
+        }
+    };
+
+    const updateGameProgress = (gameId, updates) => {
+        setGameState(prevState => ({
+            ...prevState,
+            games: prevState.games.map(game => 
+                game.id === gameId ? { ...game, ...updates } : game
+            )
+        }));
+        saveIndividualGame(gameId);
     };
 
     const hireDeveloper = (developer) => {
@@ -394,7 +462,13 @@ export const GameContextProvider = ({ children }) => {
         }, 60000); // Save every minute
 
         return () => clearInterval(saveInterval);
-    }, [user, gameState, saveGame]);
+    }, [user, gameState]);
+
+    useEffect(() => {
+        if (user) {
+            loadGame();
+        }
+    }, [user]);
 
     // Add this function to the GameContext
     const setGameImportance = (gameId, importance) => {
@@ -418,6 +492,41 @@ export const GameContextProvider = ({ children }) => {
         console.log(`Game ${gameId} released at price $${price}`);
     };
 
+    const setGamePrice = (gameId, price) => {
+        setGameState(prevState => ({
+            ...prevState,
+            games: prevState.games.map(game => 
+                game.id === gameId ? { ...game, price: parseFloat(price) } : game
+            )
+        }));
+    };
+
+    const updateGameSales = useCallback(() => {
+        setGameState(prevState => ({
+            ...prevState,
+            games: prevState.games.map(game => {
+                if (game.isReleased && game.salesDuration > 0) {
+                    return {
+                        ...game,
+                        salesDuration: game.salesDuration - 1,
+                        // Add logic here to update sales, revenue, etc.
+                    };
+                }
+                return game;
+            })
+        }));
+    }, []);
+
+    useEffect(() => {
+        const gameLoop = setInterval(() => {
+            setGameTime(prevTime => prevTime + 0.1);
+            updateGameSales();
+            // ... (rest of the game loop logic)
+        }, 1000); // Tick every second
+
+        return () => clearInterval(gameLoop);
+    }, [updateGameSales]);
+
     return (
         <GameContext.Provider value={{
             user,
@@ -431,6 +540,8 @@ export const GameContextProvider = ({ children }) => {
             selectGame,
             deleteGame,
             saveGame,
+            loadGame,
+            updateGameProgress,
             hireDeveloper,
             hireWorker,
             buyUpgrade,
@@ -445,6 +556,7 @@ export const GameContextProvider = ({ children }) => {
             setStudioReputation,
             setGameImportance,
             releaseGame,
+            setGamePrice,
         }}>
             {children}
         </GameContext.Provider>

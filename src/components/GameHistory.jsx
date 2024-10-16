@@ -6,7 +6,7 @@ import { GameContext } from '../context/GameContext';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function GameHistory({ games }) {
-    const { funds, setFunds, studioName } = useContext(GameContext);
+    const { gameState, updateGameState } = useContext(GameContext);
     const [analysisResults, setAnalysisResults] = useState({});
 
     const getMetacriticColor = (score) => {
@@ -21,32 +21,24 @@ function GameHistory({ games }) {
 
         const analysisCost = Math.floor(1000 * Math.pow(1.1, game.metacriticScore / 10));
 
-        if (funds < analysisCost) {
-            alert("Not enough funds for analysis!");
-            return;
+        if (gameState.money >= analysisCost) {
+            updateGameState(prevState => ({
+                ...prevState,
+                money: prevState.money - analysisCost
+            }));
+
+            const analysis = {
+                totalSales: game.soldUnits,
+                totalRevenue: game.revenue,
+                averageDailySales: game.soldUnits / 30,
+                salesTrend: Math.random() > 0.5 ? 'Increasing' : 'Decreasing',
+                profitMargin: ((game.revenue - (game.soldUnits * 10)) / game.revenue) * 100
+            };
+
+            setAnalysisResults(prev => ({...prev, [gameId]: analysis}));
+        } else {
+            console.log('Not enough funds to analyze the game');
         }
-
-        setFunds(prevFunds => prevFunds - analysisCost);
-
-        const pros = [];
-        const cons = [];
-
-        if (game.metacriticScore >= 75) pros.push("High Metacritic Score");
-        else if (game.metacriticScore < 50) cons.push("Low Metacritic Score");
-
-        if (game.soldUnits > 100000) pros.push("Strong Sales");
-        else if (game.soldUnits < 10000) cons.push("Weak Sales");
-
-        if (game.revenue > 1000000) pros.push("High Revenue");
-        else if (game.revenue < 100000) cons.push("Low Revenue");
-
-        if (game.price > 40) pros.push("Premium Pricing");
-        else if (game.price < 20) cons.push("Low Price Point");
-
-        setAnalysisResults(prev => ({
-            ...prev,
-            [gameId]: { pros, cons }
-        }));
     };
 
     if (!games || games.length === 0) {
@@ -58,7 +50,7 @@ function GameHistory({ games }) {
             {games.map((game) => (
                 <div key={game.id} className="bg-kb-white p-6 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
                     <h3 className="text-2xl font-bold text-kb-black mb-4">
-                        {game.name} <span className="text-sm text-kb-grey">by {studioName}</span>
+                        {game.name} <span className="text-sm text-kb-grey">by {gameState.studioName}</span>
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">

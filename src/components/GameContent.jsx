@@ -11,8 +11,8 @@ function GameContent() {
   const [activeTab, setActiveTab] = useState('active');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const activeGames = gameState?.games?.filter(game => !game.isReleased) || [];
-  const historicalGames = gameState?.games?.filter(game => game.isReleased) || [];
+  const activeGames = gameState?.games?.filter(game => !game.isReleased || (game.isReleased && game.salesDuration > 0)) || [];
+  const historicalGames = gameState?.games?.filter(game => game.isReleased && game.salesDuration === 0) || [];
 
   useEffect(() => {
     const handleResize = () => {
