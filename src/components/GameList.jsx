@@ -97,7 +97,14 @@ function GameList() {
     };
 
     const handleDevelopGame = (gameId) => {
-        developGame(gameId);
+        const game = games.find(g => g.id === gameId);
+        if (game) {
+            const newPoints = game.points + clickPower;
+            updateGameProgress(gameId, {
+                points: newPoints,
+                stage: getGameStage(newPoints)
+            });
+        }
     };
 
     return (
@@ -142,32 +149,21 @@ function GameList() {
                             className="w-full h-2 bg-kb-grey rounded-lg appearance-none cursor-pointer"
                         />
                     </div>
-                    {game.isReleased ? (
+                    {game.points >= 1000 && game.stage === 'testing' && (
                         <>
-                            <p className="text-kb-grey mb-2">Price: ${game.price}</p>
-                            <p className="text-kb-grey mb-2">Sales Duration: {game.salesDuration} days left</p>
-                            {/* Add more released game info here */}
-                        </>
-                    ) : (
-                        <>
-                            {/* ... (development stage JSX) */}
-                            {game.points >= 1000 && game.stage === 'testing' && (
-                                <>
-                                    <input
-                                        type="number"
-                                        value={game.price || 40}
-                                        onChange={(e) => handlePriceChange(game.id, e.target.value)}
-                                        placeholder="Set game price"
-                                        className="w-full px-3 py-2 mb-2 border border-kb-grey rounded"
-                                    />
-                                    <button
-                                        className="w-full bg-green-500 text-kb-white px-6 py-4 rounded-lg font-bold text-xl hover:bg-green-600 transition-colors transform hover:scale-105"
-                                        onClick={() => handleReleaseGame(game.id)}
-                                    >
-                                        Release Game
-                                    </button>
-                                </>
-                            )}
+                            <input
+                                type="number"
+                                value={game.price || 40}
+                                onChange={(e) => handlePriceChange(game.id, e.target.value)}
+                                placeholder="Set game price"
+                                className="w-full px-3 py-2 mb-2 border border-kb-grey rounded"
+                            />
+                            <button
+                                className="w-full bg-green-500 text-kb-white px-6 py-4 rounded-lg font-bold text-xl hover:bg-green-600 transition-colors transform hover:scale-105"
+                                onClick={() => handleReleaseGame(game.id)}
+                            >
+                                Release Game
+                            </button>
                         </>
                     )}
                 </div>

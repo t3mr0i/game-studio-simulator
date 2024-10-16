@@ -33,7 +33,6 @@ export const GameContextProvider = ({ children }) => {
     const [gameTime, setGameTime] = useState(0);
     const [studioName, setStudioName] = useState("");
     const [studioReputation, setStudioReputation] = useState(0);
-    const [lastSaveTime, setLastSaveTime] = useState(Date.now());
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -339,14 +338,8 @@ export const GameContextProvider = ({ children }) => {
                 return;
             }
 
-            // Ensure all numeric values are valid before saving
-            const sanitizedGame = Object.entries(game).reduce((acc, [key, value]) => {
-                acc[key] = typeof value === 'number' && !isNaN(value) ? value : 0;
-                return acc;
-            }, {});
-
             const gameRef = ref(database, `users/${user.uid}/games/${gameId}`);
-            await set(gameRef, sanitizedGame);
+            await set(gameRef, game);
 
             console.log(`Game ${gameId} saved successfully!`);
         } catch (error) {
@@ -362,8 +355,7 @@ export const GameContextProvider = ({ children }) => {
                 game.id === gameId ? { ...game, ...updates } : game
             )
         }));
-        // Remove the immediate save call
-        // saveIndividualGame(gameId);
+        saveIndividualGame(gameId);
     };
 
     const hireDeveloper = (developer) => {
@@ -442,27 +434,19 @@ export const GameContextProvider = ({ children }) => {
     };
 
     const developGame = (gameId) => {
-        setGameState(prevState => {
-            const updatedGames = prevState.games.map(game => 
+        setGames(prevGames => prevGames.map(game => 
+            game.id === gameId 
+                ? { ...game, points: game.points + gameState.clickPower } 
+                : game
+        ));
+        setGameState(prevState => ({
+            ...prevState,
+            games: prevState.games.map(game => 
                 game.id === gameId 
-                    ? { 
-                        ...game, 
-                        points: (game.points || 0) + prevState.clickPower // Handle potential NaN
-                      } 
+                    ? { ...game, points: game.points + prevState.clickPower } 
                     : game
-            );
-            return {
-                ...prevState,
-                games: updatedGames
-            };
-        });
-
-        // Check if it's time to save (e.g., every 10 seconds)
-        const currentTime = Date.now();
-        if (currentTime - lastSaveTime > 10000) { // 10 seconds
-            saveGame();
-            setLastSaveTime(currentTime);
-        }
+            )
+        }));
     };
 
     const updateStudioName = (newName) => {
@@ -478,7 +462,7 @@ export const GameContextProvider = ({ children }) => {
         }, 60000); // Save every minute
 
         return () => clearInterval(saveInterval);
-    }, [user]);
+    }, [user, gameState]);
 
     useEffect(() => {
         if (user) {
@@ -517,32 +501,6 @@ export const GameContextProvider = ({ children }) => {
         }));
     };
 
-    const updateGameSales = useCallback(() => {
-        setGameState(prevState => ({
-            ...prevState,
-            games: prevState.games.map(game => {
-                if (game.isReleased && game.salesDuration > 0) {
-                    return {
-                        ...game,
-                        salesDuration: game.salesDuration - 1,
-                        // Add logic here to update sales, revenue, etc.
-                    };
-                }
-                return game;
-            })
-        }));
-    }, []);
-
-    useEffect(() => {
-        const gameLoop = setInterval(() => {
-            setGameTime(prevTime => prevTime + 0.1);
-            updateGameSales();
-            // ... (rest of the game loop logic)
-        }, 1000); // Tick every second
-
-        return () => clearInterval(gameLoop);
-    }, [updateGameSales]);
-
     return (
         <GameContext.Provider value={{
             user,
@@ -573,7 +531,6 @@ export const GameContextProvider = ({ children }) => {
             setGameImportance,
             releaseGame,
             setGamePrice,
-            getGameStage,
         }}>
             {children}
         </GameContext.Provider>
