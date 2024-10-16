@@ -33,6 +33,7 @@ export const GameContextProvider = ({ children }) => {
     const [gameTime, setGameTime] = useState(0);
     const [studioName, setStudioName] = useState("");
     const [studioReputation, setStudioReputation] = useState(0);
+    const [lastSaveTime, setLastSaveTime] = useState(Date.now());
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -257,6 +258,12 @@ export const GameContextProvider = ({ children }) => {
     };
 
     const saveGame = async () => {
+        const currentTime = Date.now();
+        if (currentTime - lastSaveTime < 10000) { // 10 seconds cooldown
+            console.log('Skipping save, too soon since last save');
+            return;
+        }
+
         if (!user) return;
 
         try {
@@ -286,6 +293,7 @@ export const GameContextProvider = ({ children }) => {
             }, {});
             await set(gamesRef, gamesObject);
 
+            setLastSaveTime(currentTime);
             console.log('Game saved successfully!');
         } catch (error) {
             console.error("Error saving game", error);
